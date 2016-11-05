@@ -66,13 +66,17 @@ namespace APDilution
                         continue;
                     }
                     string wellInfo = val[actualRow, col].ToString();
-                    dilutionInfos.Add(new DilutionInfo(
+                    DilutionInfo newInfo = new DilutionInfo(
                         ParseSampleType(wellInfo),
                         ParseDilutionTimes(wellInfo, sampleID_Info),
-                        ParseSeqNo(wellInfo, sampleID_Info)));
+                        ParseSeqNo(wellInfo, sampleID_Info));
+                    if (newInfo.type == SampleType.Empty)
+                        break;
+                    dilutionInfos.Add(newInfo);
 
                 }
             }
+           
             return dilutionInfos;
         }
 

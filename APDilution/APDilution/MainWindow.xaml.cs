@@ -33,7 +33,9 @@ namespace APDilution
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
-            
+            worklist wklist = new worklist();
+
+            wklist.DoJob(dilutionInfos);
         }
     }
 }
