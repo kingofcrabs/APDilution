@@ -12,8 +12,11 @@ namespace APDilution
         public List<string> DoJob(List<DilutionInfo> dilutionInfos)
         {
             plateName_LastDilutionPositions.Clear();
+
+
+            int parallelHoleCount = CountParallelHole(dilutionInfos);
             //from buffer & sample to dilution
-            var  bufferPipettings = GenerateBufferPipettingInfos(dilutionInfos);
+            var bufferPipettings = GenerateBufferPipettingInfos(dilutionInfos,parallelHoleCount);
             var  samplePipettings = GenerateSamplePipettingInfos(dilutionInfos);
            
             //from dilution to reaction plate
@@ -25,6 +28,21 @@ namespace APDilution
             strs.AddRange(Format(samplePipettings,Configurations.Instance.SampleLiquidClass));
             strs.AddRange(Format(transferPipettings, Configurations.Instance.TransferLiquidClass));
             return strs;
+        }
+
+        private int CountParallelHole(List<DilutionInfo> dilutionInfos)
+        {
+            int seqID = dilutionInfos[0].seqIDinThisType;
+            int parallelCnt = 1;
+            for(int columnID = 2; columnID<= 12; columnID++)
+            {
+                if (dilutionInfos[(columnID-1) * 8].seqIDinThisType != seqID)
+                    break;
+                parallelCnt = columnID;
+            }
+            if (parallelCnt < 2 || parallelCnt > 6)
+                throw new Exception("Parallel Hole Count must be between 2 and 6!");
+            return parallelCnt;
         }
 
         private IEnumerable<string> Format(List<PipettingInfo> pipettingInfos,string liquidClass)
@@ -180,12 +198,13 @@ namespace APDilution
         #endregion
         #region buffer
 
-        internal List<List<PipettingInfo>> GenerateBufferPipettingInfos(List<DilutionInfo> dilutionInfos)
+        internal List<List<PipettingInfo>> GenerateBufferPipettingInfos(List<DilutionInfo> dilutionInfos,int parallelHoleCount)
         {
-            var firstPlateDilutions = dilutionInfos.Take(48).ToList();
-            var secondPlateDilutions = dilutionInfos.Skip(48).ToList();
-            firstPlateDilutions = GetOddColumnDilutions(firstPlateDilutions);
-            secondPlateDilutions = GetOddColumnDilutions(secondPlateDilutions);
+            int maxSampleCntPerDilutionPlate = 24 * parallelHoleCount;
+            var firstPlateDilutions = dilutionInfos.Take(maxSampleCntPerDilutionPlate).ToList();
+            var secondPlateDilutions = dilutionInfos.Skip(maxSampleCntPerDilutionPlate).ToList();
+            firstPlateDilutions = GetOddColumnDilutions(firstPlateDilutions,parallelHoleCount);
+            secondPlateDilutions = GetOddColumnDilutions(secondPlateDilutions,parallelHoleCount);
             List<List<PipettingInfo>> pipettingInfos = new List<List<PipettingInfo>>();
             pipettingInfos.AddRange(GenerateBufferPipettingInfos(firstPlateDilutions, "Dilution1"));
             plateName_LastDilutionPositions.Add("Dilution1", GetLastPositions(pipettingInfos));
@@ -195,13 +214,13 @@ namespace APDilution
             return pipettingInfos;
         }
 
-        private List<DilutionInfo> GetOddColumnDilutions(List<DilutionInfo> dilutionInfos)
+        private List<DilutionInfo> GetOddColumnDilutions(List<DilutionInfo> dilutionInfos, int parallelHoleCount)
         {
             List<DilutionInfo> oddDilutionInfos = new List<DilutionInfo>();
             for(int i =0; i< dilutionInfos.Count; i++)
             {
                 int columnID = (i + 8) / 8;
-                if(columnID % 2 == 1)
+                if (columnID % parallelHoleCount == 1)
                 {
                     oddDilutionInfos.Add(dilutionInfos[i]);
                 }

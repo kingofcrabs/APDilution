@@ -32,7 +32,24 @@ namespace APDilution
             {
                 app.Quit(); app = null;
             }
+            CheckValidity(dilutionInfos);
             return dilutionInfos;
+        }
+
+        private void CheckValidity(List<DilutionInfo> dilutionInfos)
+        {
+            var normalDilutions = dilutionInfos.Where(x=>x.type == SampleType.Normal).ToList();
+            
+            if(normalDilutions.Exists(x=>x.dilutionTimes <=0))
+                 throw new Exception("Normal samples' dilution times must > 0!");
+            if(dilutionInfos.Exists(x=>x.type == SampleType.MatrixBlank && x.dilutionTimes != 0))
+                throw new Exception("MatrixBlank samples' dilution times must be 0!");
+            if(dilutionInfos.Exists(x=>x.dilutionTimes > 6250000))
+                throw new Exception("Dilution times must be smaller than 6.25M!");
+
+
+
+
         }
 
         private List<DilutionInfo> ReadImpl(Application app, string sFilePath)
