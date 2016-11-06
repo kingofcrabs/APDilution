@@ -101,5 +101,42 @@ namespace APDilution.Tests
             //Assert.AreEqual(pipettingInfos[9].srcWellID, 3);
 
         }
+
+
+        [TestMethod()]
+        public  void GenerateTransferTest1()
+        {
+            worklist worklist = new APDilution.worklist();
+            List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
+            dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 1));
+            dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 2));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 1));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 2));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 3));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 4));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 5));
+            dilutionInfos.Add(new DilutionInfo(SampleType.MatrixBlank, 0, 1));
+
+            dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 3));
+            dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 4));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 6));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 7));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 8));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 9));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 10));
+            dilutionInfos.Add(new DilutionInfo(SampleType.MatrixBlank, 0, 2));
+            var bufferPipettings = worklist.GenerateBufferPipettingInfos(dilutionInfos);
+            var pipettingInfos = worklist.GenerateTransferPipettingInfos(dilutionInfos,0);
+            var srcWellIDs = pipettingInfos.Select(x => x.srcWellID).ToList();
+            List<int> expectedsrcWellIDs = new List<int>()
+            {
+                25,25,26,26,19,19,20,20,21,21,22,22,23,23                
+            };
+            Assert.AreEqual(srcWellIDs.Count,expectedsrcWellIDs.Count);
+            for(int i = 0; i< srcWellIDs.Count; i++)
+            {
+                Assert.AreEqual(srcWellIDs[i], expectedsrcWellIDs[i]);
+            }
+        }
     }
 }
