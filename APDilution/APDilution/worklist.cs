@@ -56,13 +56,18 @@ namespace APDilution
             return commands;
         }
 
-        private List<PipettingInfo> GenerateTransferPipettingInfos(List<DilutionInfo> dilutionInfos, int dilutionPlateIndex)
+        internal List<PipettingInfo> GenerateTransferPipettingInfos(List<DilutionInfo> dilutionInfos, int dilutionPlateIndex)
         {
             var vol = Configurations.Instance.ReactionVolume;
 
             int needTransferCnt = dilutionInfos.Count;
             if (dilutionPlateIndex != 0)
+            {
                 needTransferCnt = dilutionInfos.Count - 48;
+                if (needTransferCnt < 0)
+                    throw new Exception("need transfer count < 0!");
+            }
+                
             needTransferCnt = Math.Min(48, needTransferCnt)/2;//max 24
             string srcLabware = string.Format("Dilution{0}", dilutionPlateIndex + 1);
             int columnCnt = (needTransferCnt + 7) / 8;
@@ -74,7 +79,7 @@ namespace APDilution
                 for (int indexInColumn = 0; indexInColumn < thisColumnCnt; indexInColumn++)
                 {
                     int dstWellID = dilutionPlateIndex * 48 + GetWellID(column*2, indexInColumn);
-                    if(dilutionInfos[dstWellID].dilutionTimes == 0)//no need transfer
+                    if(dilutionInfos[dstWellID-1].dilutionTimes == 0)//no need transfer
                     {
                         srcIndex++;
                         continue;
