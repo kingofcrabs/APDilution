@@ -28,6 +28,7 @@ namespace APDilution
             BufferLiquidClass = ConfigurationManager.AppSettings["BufferLiquidClass"];
             SampleLiquidClass = ConfigurationManager.AppSettings["SampleLiquidClass"];
             TransferLiquidClass = ConfigurationManager.AppSettings["TransferLiquidClass"];
+            GradualTimes = int.Parse(ConfigurationManager.AppSettings["GradualTimes"]);
         }
 
         public string GetExeFolder()
@@ -63,6 +64,9 @@ namespace APDilution
             System.IO.File.WriteAllLines(GetOutputFolder() + "errMsg.txt", strs);
         }
 
+
+        public int GradualTimes { get; set; }
+        
         public string SampleLabware
         {
             get

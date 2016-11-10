@@ -28,6 +28,7 @@ namespace APDilution
 
         void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            //var cmdArgs = Environment.GetCommandLineArgs();
             ExcelReader excelReader = new ExcelReader();
             var dilutionInfos = excelReader.Read(@"D:\temp\ap\test.xlsx");
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
