@@ -30,7 +30,7 @@ namespace APDilution.Tests
             dilutionInfos.Add(new DilutionInfo(SampleType.STD,27000,1));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD,400,2));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD,25,3));
-            var pipettingInfoLists = worklist.GenerateBufferPipettingInfos(dilutionInfos,1);
+            var pipettingInfoLists = worklist.GenerateBufferPipettingInfos();
             //Assert.Fail();
         }
 
@@ -42,7 +42,7 @@ namespace APDilution.Tests
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 100, 1));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 80, 2));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 40, 3));
-            worklist.GenerateSamplePipettingInfos(dilutionInfos,1);
+            worklist.GenerateSamplePipettingInfos();
             //Assert.Fail();
         }
 
@@ -55,7 +55,7 @@ namespace APDilution.Tests
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 65000, 2));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 2000, 3));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 40, 4));
-            var pipettingInfos = worklist.GenerateSamplePipettingInfos(dilutionInfos,1);
+            var pipettingInfos = worklist.GenerateSamplePipettingInfos();
             var srcWellIDs = pipettingInfos.Select(x => x.srcWellID).ToList();
             //Assert.Fail();
             List<int> expectedWellIDs = new List<int> {1,2,3,4,1,9,17,2,10,3 };
@@ -85,7 +85,7 @@ namespace APDilution.Tests
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 125000, 1));
             dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 2));
-            var pipettingInfos = worklist.GenerateSamplePipettingInfos(dilutionInfos,1);
+            var pipettingInfos = worklist.GenerateSamplePipettingInfos();
             var srcWellIDs = pipettingInfos.Select(x => x.srcWellID).ToList();
             //Assert.Fail();
             //List<int> expectedWellIDs = new List<int> { 1, 2, 3, 4, 1, 9, 17, 2, 10, 3 };
@@ -131,8 +131,8 @@ namespace APDilution.Tests
             dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 9));
             dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 10));
             dilutionInfos.Add(new DilutionInfo(SampleType.MatrixBlank, 0, 2));
-            var bufferPipettings = worklist.GenerateBufferPipettingInfos(dilutionInfos,1);
-            var pipettingInfos = worklist.GenerateTransferPipettingInfos(dilutionInfos,0);
+            var bufferPipettings = worklist.GenerateBufferPipettingInfos();
+            var pipettingInfos = worklist.GenerateTransferPipettingInfos();
             var srcWellIDs = pipettingInfos.Select(x => x.srcWellID).ToList();
             List<int> expectedsrcWellIDs = new List<int>()
             {
