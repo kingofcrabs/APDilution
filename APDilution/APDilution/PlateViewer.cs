@@ -134,7 +134,7 @@ namespace APDilution
 
         private void DrawWells(DrawingContext drawingContext)
         {
-            for (int i = 0; i < dilutionInfos.Count; i++)
+            for (int i = 0; i < 96; i++)
             {
                 DrawWell(i + 1, drawingContext);
             }
@@ -154,24 +154,25 @@ namespace APDilution
             Convert(wellID, out col, out row);
             int xStart = (int)(col * GetWellWidth() + _szMargin.Width);
             int yStart = (int)(row * GetWellHeight() + _szMargin.Height);
+           
+            //bool hangOver = IsSamePosition(col, row, ptCurrentWell);
+            if (!dilutionInfos.Exists(x => x.destWellID == wellID))
+                return;
             Brush tmpBrush = GetBrush(wellID);
             Pen pen = defaultPen;
-            //bool hangOver = IsSamePosition(col, row, ptCurrentWell);
-         
-         
             bool selected = IsSamePosition(col, row, ptSelectedWell);
             if (selected)
             {
-                pen = new Pen(Brushes.Blue,1);
+                pen = new Pen(Brushes.Blue, 1);
                 if (OnSelectedWellChanged != null)
                     OnSelectedWellChanged(GetDescription(new Point(xStart, yStart)));
             }
 
-
             double height = GetWellHeight();
             drawingContext.DrawRectangle(tmpBrush, pen,
                     new Rect(new Point(xStart + 1, yStart + 1), new Size(GetWellWidth() - 1, height - 1)));
-            var dilutionInfo = dilutionInfos[wellID-1];
+      
+            var dilutionInfo = dilutionInfos.Where(x => x.destWellID == wellID).First(); //dilutionInfos[wellID-1];
             string sType = dilutionInfo.type == SampleType.Norm ? "" : dilutionInfo.type.ToString();
             string upperLine = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
             
@@ -229,7 +230,7 @@ namespace APDilution
 
         private Brush GetBrush(int wellID)
         {
-            SampleType type = dilutionInfos[wellID - 1].type;
+            SampleType type = dilutionInfos.Where(x=>x.destWellID == wellID).First().type;
             Dictionary<SampleType, Brush> type_Brush = new Dictionary<SampleType, Brush>();
             type_Brush.Add(SampleType.Norm, Brushes.Green);
             type_Brush.Add(SampleType.MatrixBlank, Brushes.White);
