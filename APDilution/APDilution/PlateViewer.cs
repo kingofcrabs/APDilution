@@ -172,11 +172,14 @@ namespace APDilution
             drawingContext.DrawRectangle(tmpBrush, pen,
                     new Rect(new Point(xStart + 1, yStart + 1), new Size(GetWellWidth() - 1, height - 1)));
             var dilutionInfo = dilutionInfos[wellID-1];
-            string upperLine = string.Format("{0}{1:D2}", dilutionInfo.type.ToString(), dilutionInfo.seqIDinThisType);
+            string sType = dilutionInfo.type == SampleType.Norm ? "" : dilutionInfo.type.ToString();
+            string upperLine = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
+            
             string lowerLine = GetDilutionDescription(dilutionInfo);
-            int xOffset = dilutionInfo.type == SampleType.Normal ? (int)(GetWellWidth() / 3) : 10;
+            int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
+            DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
             DrawText(lowerLine, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
-            if(dilutionInfo.type != SampleType.Normal
+            if(dilutionInfo.type != SampleType.Norm
                 && dilutionInfo.type != SampleType.MatrixBlank
                 && dilutionInfo.type != SampleType.Empty)
                 DrawText("ng/mL", new Point(xStart + GetWellWidth() / 5, yStart + GetWellHeight() *0.6), drawingContext);
@@ -195,14 +198,14 @@ namespace APDilution
 
         }
 
-        private void DrawText(string str, Point point, DrawingContext drawingContext)
+        private void DrawText(string str, Point point, DrawingContext drawingContext, int fontSize = 16)
         {
             var txt = new FormattedText(
                str,
                System.Globalization.CultureInfo.CurrentCulture,
                FlowDirection.LeftToRight,
                new Typeface("Courier new"),
-               16,
+               fontSize,
                Brushes.Black);
 
             drawingContext.DrawText(txt, point);
@@ -212,7 +215,7 @@ namespace APDilution
         {
             switch(dilutionInfo.type)
             {
-                case SampleType.Normal:
+                case SampleType.Norm:
                     return ((int)(dilutionInfo.dilutionTimes)).ToString();
                 case SampleType.STD:   
                 case SampleType.HQC:
@@ -228,7 +231,7 @@ namespace APDilution
         {
             SampleType type = dilutionInfos[wellID - 1].type;
             Dictionary<SampleType, Brush> type_Brush = new Dictionary<SampleType, Brush>();
-            type_Brush.Add(SampleType.Normal, Brushes.Green);
+            type_Brush.Add(SampleType.Norm, Brushes.Green);
             type_Brush.Add(SampleType.MatrixBlank, Brushes.White);
             type_Brush.Add(SampleType.HQC, Brushes.LightPink);
             type_Brush.Add(SampleType.MQC, Brushes.LightPink);

@@ -17,8 +17,8 @@ namespace APDilution.Tests
             worklist.isTesting = true;
             worklist.isGradual = true;
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 1));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 2));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 1));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 2));
             worklist.DoJob(dilutionInfos);
         }
 
@@ -84,7 +84,7 @@ namespace APDilution.Tests
             worklist worklist = new APDilution.worklist();
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 125000, 1));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 2));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 2));
             var pipettingInfos = worklist.GenerateSamplePipettingInfos();
             var srcWellIDs = pipettingInfos.Select(x => x.srcWellID).ToList();
             //Assert.Fail();
@@ -116,20 +116,20 @@ namespace APDilution.Tests
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 1));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 2));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 1));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 2));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 3));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 4));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 5));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 1));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 2));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 3));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 4));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 5));
             dilutionInfos.Add(new DilutionInfo(SampleType.MatrixBlank, 0, 1));
 
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 3));
             dilutionInfos.Add(new DilutionInfo(SampleType.STD, 250000, 4));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 6));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 7));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 8));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 9));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Normal, 65000, 10));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 6));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 7));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 8));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 9));
+            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 10));
             dilutionInfos.Add(new DilutionInfo(SampleType.MatrixBlank, 0, 2));
             var bufferPipettings = worklist.GenerateBufferPipettingInfos();
             var pipettingInfos = worklist.GenerateTransferPipettingInfos();

@@ -30,13 +30,13 @@ namespace APDilution
         {
             //var cmdArgs = Environment.GetCommandLineArgs();
             ExcelReader excelReader = new ExcelReader();
-            var dilutionInfos = excelReader.Read(@"D:\temp\ap\test.xlsx");
+            var dilutionInfos = excelReader.Read(@"D:\Projects\APDilution\test.xlsx");
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
-            worklist wklist = new worklist();
+            //worklist wklist = new worklist();
 
-            wklist.DoJob(dilutionInfos);
+            //wklist.DoJob(dilutionInfos);
         }
     }
 }
