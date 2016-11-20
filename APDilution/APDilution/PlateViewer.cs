@@ -175,7 +175,11 @@ namespace APDilution
             var dilutionInfo = dilutionInfos.Where(x => x.destWellID == wellID).First(); //dilutionInfos[wellID-1];
             string sType = dilutionInfo.type == SampleType.Norm ? "" : dilutionInfo.type.ToString();
             string upperLine = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
-            
+            if(Configurations.Instance.IsGradualPipetting && dilutionInfo.type == SampleType.Norm)
+            {
+                upperLine = string.Format("{0}{1:D2}_{2}", sType, dilutionInfo.seqIDinThisType,dilutionInfo.gradualStep);
+            }
+
             string lowerLine = GetDilutionDescription(dilutionInfo);
             int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
             DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);

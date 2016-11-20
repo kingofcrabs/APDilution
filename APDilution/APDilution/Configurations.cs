@@ -8,6 +8,38 @@ using System.Text;
 
 namespace APDilution
 {
+
+    class Utility
+    {
+        public static string GetExeFolder()
+        {
+            string s = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            return s + "\\";
+        }
+
+        public static string GetExeParentFolder()
+        {
+            string s = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            int index = s.LastIndexOf("\\");
+            return s.Substring(0, index) + "\\";
+        }
+
+        public static string GetOutputFolder()
+        {
+            string sOutputFolder = GetExeParentFolder() + "Output\\";
+            if (!Directory.Exists(sOutputFolder))
+            {
+                Directory.CreateDirectory(sOutputFolder);
+            }
+            return sOutputFolder;
+        }
+        public static int GetNeededGradualWellsCount(double times)
+        {
+            int gradualTimes = Configurations.Instance.GradualTimes;
+            int wellsNeeded = (int)Math.Ceiling(Math.Log(times, gradualTimes));
+            return wellsNeeded;
+        }
+    }
     class Configurations
     {
         static Configurations instance;
@@ -21,6 +53,19 @@ namespace APDilution
             }
         }
 
+        internal bool isTesting = false;
+        internal bool isGradual = false;
+        public bool IsGradualPipetting
+        {
+            get
+            {
+                if (isTesting)
+                    return isGradual;
+                var cmdLines = Environment.GetCommandLineArgs();
+                return cmdLines.Count() > 1 && cmdLines[1] == "G"; // gradual pipetting
+            }
+        }
+
         private Configurations()
         {
             DilutionVolume = int.Parse(ConfigurationManager.AppSettings["DilutionVolume"]);
@@ -31,37 +76,16 @@ namespace APDilution
             GradualTimes = int.Parse(ConfigurationManager.AppSettings["GradualTimes"]);
         }
 
-        public string GetExeFolder()
-        {
-            string s = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            return s + "\\";
-        }
-
-        public string GetExeParentFolder()
-        {
-            string s = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            int index = s.LastIndexOf("\\");
-            return s.Substring(0, index) + "\\";
-        }
-
-        public  string GetOutputFolder()
-        {
-            string sOutputFolder = GetExeParentFolder() + "Output\\";
-            if (!Directory.Exists(sOutputFolder))
-            {
-                Directory.CreateDirectory(sOutputFolder);
-            }
-            return sOutputFolder;
-        }
+    
 
         public void WriteResult(bool bSuccess, string errMsg)
         {
 
             string[] strs = new string[1];
             strs[0] = bSuccess.ToString();
-            System.IO.File.WriteAllLines(GetOutputFolder() + "result.txt", strs);
+            System.IO.File.WriteAllLines(Utility.GetOutputFolder() + "result.txt", strs);
             strs[0] = errMsg;
-            System.IO.File.WriteAllLines(GetOutputFolder() + "errMsg.txt", strs);
+            System.IO.File.WriteAllLines(Utility.GetOutputFolder() + "errMsg.txt", strs);
         }
 
 

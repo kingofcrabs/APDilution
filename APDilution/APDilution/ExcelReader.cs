@@ -71,54 +71,86 @@ namespace APDilution
             object[,] arryItem = (object[,])rngNormalSampleInfo.Value2;
             int lastWellIDOccupied = 1;
             int maxParallelCnt = 0;
+
+            List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
+            
             for (int i = 1; i <= rowsint - 1; i++)
             {
+                if (arryItem[i, 1] == null)
+                    break;
                 string animalNo = arryItem[i, 1].ToString();
                 int sampleID = int.Parse(arryItem[i, 2].ToString());
                 int dilutionTimes = int.Parse(arryItem[i, 3].ToString());
+                rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),dilutionTimes,ParseSeqNo(animalNo),0));
+            }
+
+            List<DilutionInfo> normalSamples = new List<DilutionInfo>();
+            if(Configurations.Instance.IsGradualPipetting) //put normal samples to the end
+            {
+                normalSamples = rawDilutionInfos.Where(x => x.type == SampleType.Norm).ToList();
+                if (normalSamples.Count > 2)
+                    throw new Exception("Normal samples' count cannot > 2!");
+                rawDilutionInfos = rawDilutionInfos.Except(normalSamples).ToList();
+            }
+
+
+            for (int i = 0; i < rawDilutionInfos.Count; i++)
+            {
                 int parallelCnt = 0;
-                List<DilutionInfo> tmpDilutionInfos = GetDilutionInfos(animalNo, sampleID, dilutionTimes,
+                int id = i + 1;
+                DilutionInfo rawDilutionInfo = rawDilutionInfos[i];
+                List<DilutionInfo> tmpDilutionInfos = GetDilutionInfos(rawDilutionInfo,
                     stdParallelCnt, sampleParallelCnt, remainingWellIDs, ref parallelCnt);
                 if (parallelCnt > maxParallelCnt)
                     maxParallelCnt = parallelCnt;
                 //lastWellIDOccupied = 
-                bool isLastWellOfColumn = IsLastWellOfColumn(i);
+                bool isLastWellOfColumn = IsLastWellOfColumn(id);
                 if (isLastWellOfColumn)
                 {
-                    lastWellIDOccupied = i + 8 * (maxParallelCnt - 1);
+                    lastWellIDOccupied = id + 8 * (maxParallelCnt - 1);
                     remainingWellIDs.RemoveAll(x => x <= lastWellIDOccupied);
                     maxParallelCnt = 0;
                 }
-                //
+
+                if(Configurations.Instance.IsGradualPipetting && id == rawDilutionInfos.Count)//jump the whole columns
+                {
+                    int regionID = (id + 7) / 8;
+                    int lastID = regionID * 8;
+                    lastWellIDOccupied = regionID * 8 * maxParallelCnt;
+                    remainingWellIDs.RemoveAll(x => x <= lastWellIDOccupied);
+                    maxParallelCnt = 0;
+                }
+
                 dilutionInfos.AddRange(tmpDilutionInfos);
-                //sampleID_Info.Add(sampleID, new NormalSampleInfo(animalNo, sampleID, dilutionTimes));
             }
 
+            if(Configurations.Instance.IsGradualPipetting) //append normal samples
+            {
+                if (remainingWellIDs.Count / 24 < normalSamples.Count)
+                    throw new Exception(string.Format("There are {0} wells remaining, not enough for {1} samples.", remainingWellIDs.Count, normalSamples.Count));
 
-            //Range rngPlateInfo = ws.Cells.get_Range("I4", "T18");
-            //object[,] val = (object[,])rngPlateInfo.Value2;
-            //for (int col = 1; col <= colCnt; col++)
-            //{
-            //    for (int row = 0; row < rowCnt; row++)
-            //    {
-            //        int actualRow = row * 2 + 1;
-            //        if (val[actualRow, col] == null)
-            //        {
-            //            dilutionInfos.Add(new DilutionInfo(SampleType.Empty, 0, 0));
-            //            continue;
-            //        }
-            //        string wellInfo = val[actualRow, col].ToString();
-            //        DilutionInfo newInfo = new DilutionInfo(
-            //            ParseSampleType(wellInfo),
-            //            ParseDilutionTimes(wellInfo, sampleID_Info),
-            //            ParseSeqNo(wellInfo, sampleID_Info));
-            //        if (newInfo.type == SampleType.Empty)
-            //            break;
-            //        dilutionInfos.Add(newInfo);
-            //    }
-            //}
+                int wellID = remainingWellIDs.Min();
+                foreach(var normalSample in normalSamples)
+                {
+                    int gradualWellsNeeded = Utility.GetNeededGradualWellsCount(normalSample.dilutionTimes);
+                    for (int i = 0; i < gradualWellsNeeded; i++)
+                    {
+                        int firstWellID = wellID + i * 2;
+                        int secondWellID = wellID + i * 2 + 1;
+                        dilutionInfos.Add(new DilutionInfo(normalSample.type, normalSample.dilutionTimes, normalSample.seqIDinThisType, firstWellID,i+1));
+                        dilutionInfos.Add(new DilutionInfo(normalSample.type, normalSample.dilutionTimes, normalSample.seqIDinThisType, secondWellID, i + 1));
+                    }
+                    wellID += 24;
+                }
+            }
             dilutionInfos = dilutionInfos.OrderBy(x => x.destWellID).ToList();
             return dilutionInfos;
+        }
+
+        private DilutionInfo GetDilutionInfos(string animalNo,int sampleID,int dilutionTimes)
+        {
+            SampleType sampleType = ParseSampleType(animalNo);
+            return new DilutionInfo(sampleType, dilutionTimes, sampleID, 0);
         }
 
         private bool IsLastWellOfColumn(int i)
@@ -126,9 +158,7 @@ namespace APDilution
             return i % 8 == 0;
         }
 
-        private List<DilutionInfo> GetDilutionInfos(string animalNo, 
-            int sampleID,
-            int dilutionTimes,
+        private List<DilutionInfo> GetDilutionInfos(DilutionInfo rawDilutionInfo,
             int stdParallelCnt,
             int sampleParallelCnt,
             List<int> remainingWellIDs,
@@ -136,12 +166,10 @@ namespace APDilution
         {
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             parallelCnt = sampleParallelCnt;
-            if(animalNo.Contains("STD"))
-            {
-                parallelCnt = stdParallelCnt;
-            }
-            SampleType sampleType = ParseSampleType(animalNo);
-            int seqNo = sampleID;
+            double dilutionTimes = rawDilutionInfo.dilutionTimes;
+            string animalNo = rawDilutionInfo.animalNo;
+            SampleType sampleType = rawDilutionInfo.type;
+            int seqNo = rawDilutionInfo.seqIDinThisType;
             int firstWellID = remainingWellIDs.Min();
             for(int i = 0; i< parallelCnt; i++)
             {
@@ -151,12 +179,6 @@ namespace APDilution
                 remainingWellIDs.Remove(wellID);
                 DilutionInfo dilutionInfo = new DilutionInfo(sampleType, dilutionTimes, seqNo,wellID);
                 dilutionInfos.Add(dilutionInfo);
-                //if( isLastWellOfColumn && i == parallelCnt-1)
-                //    remainingWellIDs.RemoveAll(x => x <= wellID);
-                //if( )
-                //{
-                //    
-                //}
             }
             return dilutionInfos;
         }
@@ -275,12 +297,16 @@ namespace APDilution
         public double dilutionTimes;
         public int seqIDinThisType;
         public int destWellID;
-        public DilutionInfo(SampleType type, double dilutionTimes, int seqNo, int destWellID)
+        public string animalNo;
+        public int gradualStep;
+        public DilutionInfo(SampleType type, double dilutionTimes, int seqNo, int destWellID, int gradualStep = 1)
         {
             this.type = type;
             this.dilutionTimes = dilutionTimes;
             this.destWellID = destWellID;
             seqIDinThisType = seqNo;
+            animalNo = "";
+            this.gradualStep = gradualStep;
         }
 
        

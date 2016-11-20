@@ -28,25 +28,31 @@ namespace APDilution
 
         void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+#if DEBUG
+            GenerateWorklist();
+#else
             try
             {
                 GenerateWorklist();
             }
+
             catch(Exception ex)
             {
                 txtInfo.Text = "Error happened in generating worklist." + ex.Message;
             }
-            //worklist wklist = new worklist();
-            //wklist.DoJob(dilutionInfos);
+#endif
+           
         }
 
         private void GenerateWorklist()
         {
             ExcelReader excelReader = new ExcelReader();
-            var dilutionInfos = excelReader.Read(@"D:\Projects\APDilution\test.xlsx");
+            var dilutionInfos = excelReader.Read(@"D:\Projects\APDilution.git\test2.xlsx");
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
+            worklist wklist = new worklist();
+            wklist.DoJob(dilutionInfos);
         }
     }
 }
