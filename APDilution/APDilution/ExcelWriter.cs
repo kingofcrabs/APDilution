@@ -11,11 +11,11 @@ namespace APDilution
 {
     class ExcelWriter
     {
-        List<string> files = new List<string>();
+        List<string> names = new List<string>();
         List<List<PipettingInfo>> pipettingInfosList = new List<List<PipettingInfo>>();
-        public void PrepareSave2File(string file,List<PipettingInfo> pipettingInfos)
+        public void PrepareSave2File(string name,List<PipettingInfo> pipettingInfos)
         {
-            files.Add(file);
+            names.Add(name);
             pipettingInfosList.Add(pipettingInfos);
         }
 
@@ -27,11 +27,15 @@ namespace APDilution
             Workbook wb = app.Workbooks.Add();
             try
             {
-                Worksheet ws = (Worksheet)wb.Worksheets[1];
-                ws.get_Range("A1").Value2 = "Dilution Information";
-                FillHeader(ws);
-                for (int i = 0; i < files.Count; i++ )
+                for (int i = 0; i < names.Count; i++ )
                 {
+                    Worksheet ws = null;
+                    if(i >= wb.Worksheets.Count)
+                        ws = (Worksheet)wb.Worksheets.Add();
+                    else
+                        ws = (Worksheet)wb.Worksheets[i+1];
+                    ws.get_Range("A1").Value2 = names[i];
+                    FillHeader(ws);
                     foreach (var pipettingInfo in pipettingInfosList[i])
                     {
                         double times = pipettingInfo.dilutionTimes;
@@ -39,8 +43,8 @@ namespace APDilution
                         rng.Interior.Color = GetColor(pipettingInfo.type);
                         rng.Value2 = string.Format("{0}", pipettingInfo.dilutionTimes);
                     }
-                    wb.SaveAs(files[i]);
                 }
+                wb.SaveAs(Utility.GetOutputFolder() +"DilutionInfo.xlsx");
             }
             finally
             {
@@ -50,6 +54,7 @@ namespace APDilution
             }
         }
 
+      
 
         private Color GetColor(SampleType sampleType)
         {

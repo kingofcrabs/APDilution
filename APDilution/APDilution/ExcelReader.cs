@@ -17,16 +17,15 @@ namespace APDilution
         const int colCnt = 12;
         int orgSTDConc = 100;
 
-        public List<DilutionInfo> Read(string sFilePath)
+        public List<DilutionInfo> Read(string sFilePath,ref List<DilutionInfo> rawDilutionInfo)
         {
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             Application app = new Application();
             try
             {
-                
                 app.Visible = false;
                 app.DisplayAlerts = false;
-                dilutionInfos = ReadImpl(app,sFilePath);
+                dilutionInfos = ReadImpl(app, sFilePath, ref rawDilutionInfo);
             }
             finally
             {
@@ -48,7 +47,7 @@ namespace APDilution
                 throw new Exception("Dilution times must be smaller than 6.25M!");
         }
 
-        private List<DilutionInfo> ReadImpl(Application app, string sFilePath)
+        private List<DilutionInfo> ReadImpl(Application app, string sFilePath, ref List<DilutionInfo> rawDilutionInfos)
         {
             Workbook wb = app.Workbooks.Open(sFilePath);
             Worksheet ws = (Worksheet)wb.Worksheets.get_Item(1);
@@ -71,9 +70,7 @@ namespace APDilution
             object[,] arryItem = (object[,])rngNormalSampleInfo.Value2;
             int lastWellIDOccupied = 1;
             int maxParallelCnt = 0;
-
-            List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
-            
+            rawDilutionInfos = new List<DilutionInfo>();
             for (int i = 1; i <= rowsint - 1; i++)
             {
                 if (arryItem[i, 1] == null)

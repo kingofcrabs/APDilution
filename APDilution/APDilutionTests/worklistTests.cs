@@ -17,7 +17,7 @@ namespace APDilution.Tests
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 1,1));
             dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 2,2));
-            worklist.DoJob(dilutionInfos);
+            //worklist.DoJob(dilutionInfos);
         }
 
         [TestMethod()]

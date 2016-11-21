@@ -10,13 +10,17 @@ namespace APDilution
     {
     
         List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
+        List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
         Dictionary<string, List<int>> plateName_LastDilutionPositions = new Dictionary<string, List<int>>();
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
-        public List<string> DoJob(List<DilutionInfo> dilutionInfos)
+        public List<string> DoJob(List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos)
         {
             //plateName_LastDilutionPositions.Clear();
             //int parallelHoleCount = CountParallelHole(dilutionInfos);
-            this.dilutionInfos = FilterParallel(dilutionInfos);
+            //this.dilutionInfos = FilterParallel(dilutionInfos);
+            this.rawDilutionInfos = rawDilutionInfos;
+            this.dilutionInfos = dilutionInfos;
+
             List<List<PipettingInfo>> firstPlateBuffer = new List<List<PipettingInfo>>();
             List<List<PipettingInfo>> secondPlateBuffer = new List<List<PipettingInfo>>();
             List<PipettingInfo> firstPlateSample = new List<PipettingInfo>();
@@ -48,24 +52,14 @@ namespace APDilution
             firstPlateBuffer.ForEach(x => firstBufferFlat.AddRange(x));
             List<PipettingInfo> secondBufferFlat = new List<PipettingInfo>();
             secondPlateBuffer.ForEach(x => secondBufferFlat.AddRange(x));
-            excelWriter.Save2File(outputFolder + "firstBuffer.xlsx", firstBufferFlat);
-            excelWriter.Save2File(outputFolder + "firstPlateSample.xlsx", firstPlateSample);
-            excelWriter.Save2File(outputFolder + "secondPlateBuffer.xlsx", secondBufferFlat);
-            excelWriter.Save2File(outputFolder + "secondPlateSample.xlsx", secondPlateSample);
+            excelWriter.PrepareSave2File("firstBuffer", firstBufferFlat);
+            excelWriter.PrepareSave2File("firstPlateSample", firstPlateSample);
+            excelWriter.PrepareSave2File("secondPlateBuffer", secondBufferFlat);
+            excelWriter.PrepareSave2File("secondPlateSample", secondPlateSample);
+            excelWriter.Save();
         }
 
-        private List<DilutionInfo> FilterParallel(List<DilutionInfo> dilutionInfos)
-        {
-            List<DilutionInfo> filtered = new List<DilutionInfo>();
-            foreach(var dilutionInfo in dilutionInfos)
-            {
-                if(!filtered.Exists(x=>x.type == dilutionInfo.type && x.seqIDinThisType == dilutionInfo.seqIDinThisType))
-                {
-                    filtered.Add(Clone(dilutionInfo));
-                }
-            }
-            return filtered;
-        }
+       
 
         private void Parse(List<DilutionInfo> dilutionInfos, Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID)
         {
@@ -106,10 +100,8 @@ namespace APDilution
         internal List<PipettingInfo> GenerateTransferPipettingInfos()
         {
             int firstPlateCnt = GetMaxSampleCntFirstDilutionPlate();
-            List<DilutionInfo> cloneDilutionInfo = new List<DilutionInfo>();
-            dilutionInfos.ForEach(x=>cloneDilutionInfo.Add(Clone(x)));
-            var firstPlateSamples = cloneDilutionInfo.Take(firstPlateCnt).ToList();
-            var secondPlateSamples = cloneDilutionInfo.Skip(firstPlateCnt).ToList();
+            var firstPlateSamples = rawDilutionInfos.Take(firstPlateCnt).ToList();
+            var secondPlateSamples = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             var firstPlateName = "Dilution1";
             var secondPlateName = "Dilution2";
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
@@ -132,7 +124,9 @@ namespace APDilution
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
             foreach (var current in dilutionInfosWithoutParallel)
             {
-                var parallelDilutions = dilutionInfos.Where(x => x.type == current.type && x.seqIDinThisType == current.seqIDinThisType).ToList();
+                var parallelDilutions = dilutionInfos.Where(x => x.type == current.type &&
+                    x.seqIDinThisType == current.seqIDinThisType &&
+                    x.dilutionTimes == current.dilutionTimes).ToList();
                 var destWells = parallelDilutions.Select(x => x.destWellID).ToList();
                 var srcWellID = srcPositionOnDilutionPlate[index];
                 if(Configurations.Instance.IsGradualPipetting && current.type == SampleType.Norm)
@@ -182,12 +176,9 @@ namespace APDilution
         internal List<PipettingInfo> GenerateSamplePipettingInfos(ref List<PipettingInfo> firstPlate,ref List<PipettingInfo> secondPlate)
         {
             int firstPlateCnt = GetMaxSampleCntFirstDilutionPlate();
-        
-            List<DilutionInfo> cloneDilutionInfos = new List<DilutionInfo>();
             
-            dilutionInfos.ForEach(x => cloneDilutionInfos.Add(Clone(x)));
-            var firstPlateSamples = dilutionInfos.Take(firstPlateCnt).ToList();
-            var secondPlateSamples = dilutionInfos.Skip(firstPlateCnt).ToList();
+            var firstPlateSamples = rawDilutionInfos.Take(firstPlateCnt).ToList();
+            var secondPlateSamples = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
             firstPlate = GenerateSamplePipettingInfos(firstPlateSamples, "Dilution1");
             secondPlate = GenerateSamplePipettingInfos(secondPlateSamples, "Dilution2");
@@ -195,13 +186,6 @@ namespace APDilution
             pipettingInfos.AddRange(secondPlate);
             return pipettingInfos;
         }
-
-     
-
-     
-
-
-       
 
         private List<PipettingInfo> GenerateSamplePipettingInfos(List<DilutionInfo> dilutionInfos, string destPlateLabel)
         {
@@ -306,8 +290,8 @@ namespace APDilution
         internal List<List<PipettingInfo>> GenerateBufferPipettingInfos(ref List<List<PipettingInfo>> firstPlate,ref List<List<PipettingInfo>>secondPlate)
         {
             int firstPlateCnt = GetMaxSampleCntFirstDilutionPlate();
-            List<DilutionInfo> firstPlateDilutions = dilutionInfos.Take(firstPlateCnt).ToList();
-            var secondPlateDilutions = dilutionInfos.Skip(firstPlateCnt).ToList();
+            List<DilutionInfo> firstPlateDilutions = rawDilutionInfos.Take(firstPlateCnt).ToList();
+            var secondPlateDilutions = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             List<List<PipettingInfo>> pipettingInfos = new List<List<PipettingInfo>>();
             firstPlate = GenerateBufferPipettingInfos(firstPlateDilutions, "Dilution1");
             pipettingInfos.AddRange(firstPlate);

@@ -47,12 +47,13 @@ namespace APDilution
         private void GenerateWorklist()
         {
             ExcelReader excelReader = new ExcelReader();
-            var dilutionInfos = excelReader.Read(@"D:\Projects\APDilution.git\test2.xlsx");
+            List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
+            var dilutionInfos = excelReader.Read(@"D:\Projects\APDilution\test.xlsx", ref rawDilutionInfos);
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
             worklist wklist = new worklist();
-            wklist.DoJob(dilutionInfos);
+            wklist.DoJob(dilutionInfos, rawDilutionInfos);
         }
     }
 }
