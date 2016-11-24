@@ -23,12 +23,12 @@ namespace APDilution
 
             List<List<PipettingInfo>> firstPlateBuffer = new List<List<PipettingInfo>>();
             List<List<PipettingInfo>> secondPlateBuffer = new List<List<PipettingInfo>>();
-            List<PipettingInfo> firstPlateSample = new List<PipettingInfo>();
-            List<PipettingInfo> secondPlateSample = new List<PipettingInfo>();
+            //List<PipettingInfo> firstPlateSample = new List<PipettingInfo>();
+            //List<PipettingInfo> secondPlateSample = new List<PipettingInfo>();
             //from buffer & sample to dilution
             var bufferPipettings = GenerateBufferPipettingInfos(ref firstPlateBuffer, ref secondPlateBuffer);
-            var samplePipettings = GenerateSamplePipettingInfos(ref firstPlateSample,ref secondPlateSample);
-            //Save2Excel(firstPlateBuffer, firstPlateSample, secondPlateBuffer, secondPlateSample);
+            var samplePipettings = GenerateSamplePipettingInfos();
+            Save2Excel(firstPlateBuffer, secondPlateBuffer);
 
             //from dilution to reaction plate
             List<PipettingInfo> transferPipettings = GenerateTransferPipettingInfos();
@@ -43,8 +43,8 @@ namespace APDilution
             return strs;
         }
 
-        private void Save2Excel(List<List<PipettingInfo>> firstPlateBuffer, List<PipettingInfo> firstPlateSample, 
-            List<List<PipettingInfo>> secondPlateBuffer, List<PipettingInfo> secondPlateSample)
+        private void Save2Excel(List<List<PipettingInfo>> firstPlateBuffer, 
+            List<List<PipettingInfo>> secondPlateBuffer)
         {
             ExcelWriter excelWriter = new ExcelWriter();
             string outputFolder = Utility.GetOutputFolder();
@@ -53,9 +53,9 @@ namespace APDilution
             List<PipettingInfo> secondBufferFlat = new List<PipettingInfo>();
             secondPlateBuffer.ForEach(x => secondBufferFlat.AddRange(x));
             excelWriter.PrepareSave2File("firstBuffer", firstBufferFlat);
-            excelWriter.PrepareSave2File("firstPlateSample", firstPlateSample);
+            //excelWriter.PrepareSave2File("firstPlateSample", firstPlateSample);
             excelWriter.PrepareSave2File("secondPlateBuffer", secondBufferFlat);
-            excelWriter.PrepareSave2File("secondPlateSample", secondPlateSample);
+            //excelWriter.PrepareSave2File("secondPlateSample", secondPlateSample);
             excelWriter.Save();
         }
 
@@ -173,15 +173,15 @@ namespace APDilution
        
 
         #region sample
-        internal List<PipettingInfo> GenerateSamplePipettingInfos(ref List<PipettingInfo> firstPlate,ref List<PipettingInfo> secondPlate)
+        internal List<PipettingInfo> GenerateSamplePipettingInfos()
         {
             int firstPlateCnt = GetMaxSampleCntFirstDilutionPlate();
             
             var firstPlateSamples = rawDilutionInfos.Take(firstPlateCnt).ToList();
             var secondPlateSamples = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
-            firstPlate = GenerateSamplePipettingInfos(firstPlateSamples, "Dilution1");
-            secondPlate = GenerateSamplePipettingInfos(secondPlateSamples, "Dilution2");
+            var firstPlate = GenerateSamplePipettingInfos(firstPlateSamples, "Dilution1");
+            var secondPlate = GenerateSamplePipettingInfos(secondPlateSamples, "Dilution2");
             pipettingInfos.AddRange(firstPlate);
             pipettingInfos.AddRange(secondPlate);
             return pipettingInfos;

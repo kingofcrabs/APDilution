@@ -65,6 +65,7 @@
     </ApplicationDefinition>
     <Compile Include="Configurations.cs" />
     <Compile Include="ExcelWriter.cs" />
+    <Compile Include="tpl.cs" />
     <Compile Include="worklist.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

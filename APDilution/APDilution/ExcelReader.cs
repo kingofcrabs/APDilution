@@ -78,7 +78,7 @@ namespace APDilution
                 string animalNo = arryItem[i, 1].ToString();
                 int sampleID = int.Parse(arryItem[i, 2].ToString());
                 int dilutionTimes = int.Parse(arryItem[i, 3].ToString());
-                rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),dilutionTimes,ParseSeqNo(animalNo),0));
+                rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo), dilutionTimes, ParseSeqNo(animalNo), 0,1,animalNo));
             }
 
             List<DilutionInfo> normalSamples = new List<DilutionInfo>();
@@ -123,6 +123,7 @@ namespace APDilution
 
             if(Configurations.Instance.IsGradualPipetting) //append normal samples
             {
+                rawDilutionInfos.AddRange(normalSamples);
                 if (remainingWellIDs.Count / 24 < normalSamples.Count)
                     throw new Exception(string.Format("There are {0} wells remaining, not enough for {1} samples.", remainingWellIDs.Count, normalSamples.Count));
 
@@ -168,13 +169,14 @@ namespace APDilution
             SampleType sampleType = rawDilutionInfo.type;
             int seqNo = rawDilutionInfo.seqIDinThisType;
             int firstWellID = remainingWellIDs.Min();
+            
             for(int i = 0; i< parallelCnt; i++)
             {
                 int wellID = firstWellID + i * 8;
                 if (!remainingWellIDs.Contains(wellID))
                     throw new Exception(string.Format("There is no well: {0} for sample {1}!",wellID,animalNo));
                 remainingWellIDs.Remove(wellID);
-                DilutionInfo dilutionInfo = new DilutionInfo(sampleType, dilutionTimes, seqNo,wellID);
+                DilutionInfo dilutionInfo = new DilutionInfo(sampleType, dilutionTimes, seqNo, wellID, 1, animalNo);
                 dilutionInfos.Add(dilutionInfo);
             }
             return dilutionInfos;
@@ -296,13 +298,13 @@ namespace APDilution
         public int destWellID;
         public string animalNo;
         public int gradualStep;
-        public DilutionInfo(SampleType type, double dilutionTimes, int seqNo, int destWellID, int gradualStep = 1)
+        public DilutionInfo(SampleType type, double dilutionTimes, int seqNo, int destWellID, int gradualStep = 1,string animalNo = "")
         {
             this.type = type;
             this.dilutionTimes = dilutionTimes;
             this.destWellID = destWellID;
             seqIDinThisType = seqNo;
-            animalNo = "";
+            this.animalNo = animalNo;
             this.gradualStep = gradualStep;
         }
 

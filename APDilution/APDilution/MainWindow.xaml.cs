@@ -48,7 +48,7 @@ namespace APDilution
         {
             ExcelReader excelReader = new ExcelReader();
             List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
-            var dilutionInfos = excelReader.Read(@"D:\Projects\APDilution\test.xlsx", ref rawDilutionInfos);
+            var dilutionInfos = excelReader.Read(@"D:\Projects\APDilution.git\test2.xlsx", ref rawDilutionInfos);
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
