@@ -384,7 +384,7 @@ namespace APDilution
             int startWellID = 1 + index;
             int wellsNeeded = (int)Math.Ceiling(Math.Log(times, gradualTimes));
             List<int> destWellIDs = new List<int>();
-            if (wellsNeeded > 12)
+            if (wellsNeeded > 24)
                 throw new Exception(string.Format("Need {0} wells to do gradual dilution!",wellsNeeded));
             for (int i = 0; i < wellsNeeded; i++)
                 destWellIDs.Add(startWellID + i * 8);

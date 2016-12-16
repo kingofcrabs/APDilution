@@ -188,7 +188,7 @@ namespace APDilution
         {
             if(wellInfo.Contains("Matrix"))
                 return 0;
-            List<string> keywords = new List<string>() { "STD", "MQC", "LQC","HQC" };
+            List<string> keywords = new List<string>() { "STD", "MQC", "LQC","HQC","Test" };
             foreach (string s in keywords)
                 wellInfo = wellInfo.Replace(s, "");
             return int.Parse(wellInfo);
