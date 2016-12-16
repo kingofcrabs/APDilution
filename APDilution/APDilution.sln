@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APDilution", "APDilution\AP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APDilutionTests", "APDilutionTests\APDilutionTests.csproj", "{FDBBDBFE-368A-4490-B9F3-1BB060D76E16}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BestCombination", "BestCombination\BestCombination.csproj", "{B64B2A38-3BC2-4D42-AB7C-BBE899EC97EF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{FDBBDBFE-368A-4490-B9F3-1BB060D76E16}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FDBBDBFE-368A-4490-B9F3-1BB060D76E16}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FDBBDBFE-368A-4490-B9F3-1BB060D76E16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B64B2A38-3BC2-4D42-AB7C-BBE899EC97EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B64B2A38-3BC2-4D42-AB7C-BBE899EC97EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B64B2A38-3BC2-4D42-AB7C-BBE899EC97EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B64B2A38-3BC2-4D42-AB7C-BBE899EC97EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

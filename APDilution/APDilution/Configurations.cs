@@ -62,7 +62,7 @@ namespace APDilution
                 if (isTesting)
                     return isGradual;
                 var cmdLines = Environment.GetCommandLineArgs();
-                return cmdLines.Count() > 1 && cmdLines[1] == "G"; // gradual pipetting
+                return cmdLines.Count() > 2 && cmdLines[2] == "G"; // gradual pipetting
             }
         }
 
@@ -74,9 +74,8 @@ namespace APDilution
             SampleLiquidClass = ConfigurationManager.AppSettings["SampleLiquidClass"];
             TransferLiquidClass = ConfigurationManager.AppSettings["TransferLiquidClass"];
             GradualTimes = int.Parse(ConfigurationManager.AppSettings["GradualTimes"]);
+            WorkingFolder = ConfigurationManager.AppSettings["WorkingFolder"];
         }
-
-    
 
         public void WriteResult(bool bSuccess, string errMsg)
         {

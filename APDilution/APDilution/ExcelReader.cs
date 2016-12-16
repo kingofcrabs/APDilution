@@ -45,7 +45,16 @@ namespace APDilution
                 throw new Exception("MatrixBlank samples' dilution times must be 0!");
             if(dilutionInfos.Exists(x=>x.dilutionTimes > 6250000))
                 throw new Exception("Dilution times must be smaller than 6.25M!");
+
+            FactorFinder factorFinder = new FactorFinder();
+            var validTimes = factorFinder.GetValidDilutionTimes();
+            foreach(var dilutionInfo in dilutionInfos)
+            {
+                if (!validTimes.Exists(x => x == dilutionInfo.dilutionTimes))
+                    throw new Exception(string.Format("Sample with animal no:{0}'s dilution times: {1} is invalid.", dilutionInfo.animalNo, dilutionInfo.dilutionTimes));
+            }
         }
+
 
         private List<DilutionInfo> ReadImpl(Application app, string sFilePath, ref List<DilutionInfo> rawDilutionInfos)
         {
@@ -164,7 +173,7 @@ namespace APDilution
         {
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             parallelCnt = sampleParallelCnt;
-            double dilutionTimes = rawDilutionInfo.dilutionTimes;
+            int dilutionTimes = rawDilutionInfo.dilutionTimes;
             string animalNo = rawDilutionInfo.animalNo;
             SampleType sampleType = rawDilutionInfo.type;
             int seqNo = rawDilutionInfo.seqIDinThisType;
@@ -293,12 +302,12 @@ namespace APDilution
     public struct DilutionInfo
     {
         public SampleType type;
-        public double dilutionTimes;
+        public int dilutionTimes;
         public int seqIDinThisType;
         public int destWellID;
         public string animalNo;
         public int gradualStep;
-        public DilutionInfo(SampleType type, double dilutionTimes, int seqNo, int destWellID, int gradualStep = 1,string animalNo = "")
+        public DilutionInfo(SampleType type, int dilutionTimes, int seqNo, int destWellID, int gradualStep = 1,string animalNo = "")
         {
             this.type = type;
             this.dilutionTimes = dilutionTimes;

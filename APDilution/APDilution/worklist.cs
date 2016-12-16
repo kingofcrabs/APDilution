@@ -13,22 +13,33 @@ namespace APDilution
         List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
         Dictionary<string, List<int>> plateName_LastDilutionPositions = new Dictionary<string, List<int>>();
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
-        public List<string> DoJob(List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos)
+        public List<string> DoJob(List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
+            out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat)
         {
             //plateName_LastDilutionPositions.Clear();
             //int parallelHoleCount = CountParallelHole(dilutionInfos);
             //this.dilutionInfos = FilterParallel(dilutionInfos);
+            firstPlateBufferFlat = null;
+            secondPlateBufferFlat = null;
             this.rawDilutionInfos = rawDilutionInfos;
             this.dilutionInfos = dilutionInfos;
 
             List<List<PipettingInfo>> firstPlateBuffer = new List<List<PipettingInfo>>();
             List<List<PipettingInfo>> secondPlateBuffer = new List<List<PipettingInfo>>();
-            //List<PipettingInfo> firstPlateSample = new List<PipettingInfo>();
-            //List<PipettingInfo> secondPlateSample = new List<PipettingInfo>();
+ 
             //from buffer & sample to dilution
             var bufferPipettings = GenerateBufferPipettingInfos(ref firstPlateBuffer, ref secondPlateBuffer);
             var samplePipettings = GenerateSamplePipettingInfos();
-            Save2Excel(firstPlateBuffer, secondPlateBuffer);
+
+            //convert to flat
+            List<PipettingInfo> firstBufferFlat = new List<PipettingInfo>();
+            firstPlateBuffer.ForEach(x => firstBufferFlat.AddRange(x));
+            List<PipettingInfo> secondBufferFlat = new List<PipettingInfo>();
+            secondPlateBuffer.ForEach(x => secondBufferFlat.AddRange(x));
+            firstPlateBufferFlat = firstBufferFlat;
+            secondPlateBufferFlat = secondBufferFlat;
+
+            Save2Excel(firstBufferFlat, secondBufferFlat);
 
             //from dilution to reaction plate
             List<PipettingInfo> transferPipettings = GenerateTransferPipettingInfos();
@@ -43,15 +54,11 @@ namespace APDilution
             return strs;
         }
 
-        private void Save2Excel(List<List<PipettingInfo>> firstPlateBuffer, 
-            List<List<PipettingInfo>> secondPlateBuffer)
+        private void Save2Excel(List<PipettingInfo> firstBufferFlat,
+            List<PipettingInfo> secondBufferFlat)
         {
             ExcelWriter excelWriter = new ExcelWriter();
             string outputFolder = Utility.GetOutputFolder();
-            List<PipettingInfo> firstBufferFlat =   new List<PipettingInfo> ();
-            firstPlateBuffer.ForEach(x => firstBufferFlat.AddRange(x));
-            List<PipettingInfo> secondBufferFlat = new List<PipettingInfo>();
-            secondPlateBuffer.ForEach(x => secondBufferFlat.AddRange(x));
             excelWriter.PrepareSave2File("firstBuffer", firstBufferFlat);
             //excelWriter.PrepareSave2File("firstPlateSample", firstPlateSample);
             excelWriter.PrepareSave2File("secondPlateBuffer", secondBufferFlat);
@@ -220,7 +227,7 @@ namespace APDilution
 
         private int GetMaxDilutionWellsNeeded(List<DilutionInfo> thisColumnPipettingInfos)
         {
-            double maxDilutionTiems = thisColumnPipettingInfos.Select(x => x.dilutionTimes).Max();
+            int maxDilutionTiems = thisColumnPipettingInfos.Select(x => x.dilutionTimes).Max();
             return GetEachStepVolume(maxDilutionTiems, true).Count;
         }
 
@@ -254,7 +261,7 @@ namespace APDilution
             int indexInColumn)
         {
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
-            double times = dilutionInfo.dilutionTimes;
+            int times = dilutionInfo.dilutionTimes;
             List<int> sampleVolumes = GetEachStepVolume(times, false);
             
 
@@ -380,11 +387,11 @@ namespace APDilution
         {
             List<PipettingInfo> pipettingInfo = new List<PipettingInfo>();
             int gradualTimes = Configurations.Instance.GradualTimes;
-            double times = dilutionInfo.dilutionTimes;
+            int times = dilutionInfo.dilutionTimes;
             int startWellID = 1 + index;
             int wellsNeeded = (int)Math.Ceiling(Math.Log(times, gradualTimes));
             List<int> destWellIDs = new List<int>();
-            if (wellsNeeded > 24)
+            if (wellsNeeded > 12)
                 throw new Exception(string.Format("Need {0} wells to do gradual dilution!",wellsNeeded));
             for (int i = 0; i < wellsNeeded; i++)
                 destWellIDs.Add(startWellID + i * 8);
@@ -443,7 +450,7 @@ namespace APDilution
             int columnIndex, int indexInColumn)
         {
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
-            double times = dilutionInfo.dilutionTimes;
+            int times = dilutionInfo.dilutionTimes;
             List<int> dilutionVolumes = GetEachStepVolume(times,true);
             string srcLabware = "Buffer";
             foreach(double vol in dilutionVolumes)
@@ -485,43 +492,16 @@ namespace APDilution
             return columnIndex * 8 + indexInColumn + 1;
         }
 
-        private List<int> GetEachStepVolume(double times, bool isBuffer)
+        private List<int> GetEachStepVolume(int times, bool isBuffer)
         {
-            if (times == 0)
-                return new List<int>() { 0 };
-            List<int> eachStepMaxTimes = new List<int>(){
-                50,2500,125000,6250000};
-            int neededSteps = 0;
-            for(int i = 0; i< eachStepMaxTimes.Count; i++)
-            {
-                if(eachStepMaxTimes[i] > times)
-                {
-                    neededSteps = i + 1;
-                    break;
-                }
-            }
-            double eachStepTimes = Math.Pow(times, 1.0 / neededSteps);
-
-            if (Configurations.Instance.IsGradualPipetting)
-            {
-                eachStepTimes = Configurations.Instance.GradualTimes;
-                neededSteps = (int)Math.Ceiling(Math.Log(times, eachStepTimes));
-            }
-
-            double currentTimes = 1;
+            FactorFinder factorFinder = new FactorFinder();
+            List<int> eachStepTimes = factorFinder.GetBestFactors(times);
             List<int> vols = new List<int>();
-            for(int i = 0; i< neededSteps; i++)
+            foreach(var thisStepTimes in eachStepTimes)
             {
-                double thisStepTimes = eachStepTimes;
-                if( i == neededSteps-1)
-                {
-                    thisStepTimes = times / currentTimes;
-                }
                 int bufferVol = (int)(Configurations.Instance.DilutionVolume * (thisStepTimes - 1) / thisStepTimes);
                 int sampleVol = (int)(Configurations.Instance.DilutionVolume - bufferVol);
                 vols.Add(isBuffer ? bufferVol : sampleVol);
-                double realTimes = Configurations.Instance.DilutionVolume / sampleVol;
-                currentTimes *= realTimes;
             }
             return vols;
         }
@@ -540,7 +520,7 @@ namespace APDilution
     }
 
 
-    class PipettingInfo
+    public class PipettingInfo
     {
 
         public string srcLabware;

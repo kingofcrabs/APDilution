@@ -21,8 +21,11 @@ namespace APDilution
         List<int> notUsedWellIDs = new List<int>();
         public delegate void selectedWellChangedHandler(string sNewWell);
         public event selectedWellChangedHandler OnSelectedWellChanged;
+        Plate2Show plate2Show = Plate2Show.dilution;
 
         List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
+        List<PipettingInfo> firstPlateBuffer = new List<PipettingInfo>();
+        List<PipettingInfo> secondPlateBuffer = new List<PipettingInfo>();
         public PlateViewer(Size sz, Size szMargin, int col = 12, int row = 8)
         {
             _size = sz;
@@ -172,22 +175,19 @@ namespace APDilution
             drawingContext.DrawRectangle(tmpBrush, pen,
                     new Rect(new Point(xStart + 1, yStart + 1), new Size(GetWellWidth() - 1, height - 1)));
       
-            var dilutionInfo = dilutionInfos.Where(x => x.destWellID == wellID).First(); //dilutionInfos[wellID-1];
-            string sType = dilutionInfo.type == SampleType.Norm ? "" : dilutionInfo.type.ToString();
-            string upperLine = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
-            if(Configurations.Instance.IsGradualPipetting && dilutionInfo.type == SampleType.Norm)
+            switch(plate2Show)
             {
-                upperLine = string.Format("{0}{1:D2}_{2}", sType, dilutionInfo.seqIDinThisType,dilutionInfo.gradualStep);
+                case Plate2Show.dilution:
+                    DrawDilutionInfo(wellID,xStart,yStart,drawingContext);
+                    break;
+                case Plate2Show.reaction1:
+                case Plate2Show.reaction2:
+                    DrawReaction(wellID,xStart,yStart,drawingContext);
+                    break;
+                default:
+                    throw new Exception("Invalid plate, only dilution, reaction plate are supported!");
             }
-
-            string lowerLine = GetDilutionDescription(dilutionInfo);
-            int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
-            DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
-            DrawText(lowerLine, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
-            if(dilutionInfo.type != SampleType.Norm
-                && dilutionInfo.type != SampleType.MatrixBlank
-                && dilutionInfo.type != SampleType.Empty)
-                DrawText("ng/mL", new Point(xStart + GetWellWidth() / 5, yStart + GetWellHeight() *0.6), drawingContext);
+            
             if (selected)
             {
                 string sDesc = GetDescription(new Point(xStart, yStart));
@@ -201,6 +201,38 @@ namespace APDilution
                 drawingContext.DrawText(txt, new Point(xStart + GetWellWidth() / 3, yStart + GetWellHeight() / 3));
             }
 
+        }
+
+        private void DrawReaction(int wellID, int xStart, int yStart, DrawingContext drawingContext)
+        {
+            PipettingInfo pipettingInfo = null;
+            var plateBuffer = plate2Show == Plate2Show.reaction1 ? firstPlateBuffer : secondPlateBuffer;
+            if (plateBuffer == null || !plateBuffer.Exists(x => x.dstWellID == wellID))
+                return;
+            pipettingInfo = plateBuffer.Where(x => x.dstWellID == wellID).First();
+            int xOffset = 10;
+            string txt = pipettingInfo.dilutionTimes.ToString();
+            DrawText(txt, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
+        }
+
+        private void DrawDilutionInfo(int wellID, int xStart, int yStart, DrawingContext drawingContext)
+        {
+              var dilutionInfo = dilutionInfos.Where(x => x.destWellID == wellID).First();
+                string sType = dilutionInfo.type == SampleType.Norm ? "" : dilutionInfo.type.ToString();
+                string upperLine = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
+                if (Configurations.Instance.IsGradualPipetting && dilutionInfo.type == SampleType.Norm)
+                {
+                    upperLine = string.Format("{0}{1:D2}_{2}", sType, dilutionInfo.seqIDinThisType, dilutionInfo.gradualStep);
+                }
+
+                string lowerLine = GetDilutionDescription(dilutionInfo);
+                int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
+                DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
+                DrawText(lowerLine, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
+                if (dilutionInfo.type != SampleType.Norm
+                    && dilutionInfo.type != SampleType.MatrixBlank
+                    && dilutionInfo.type != SampleType.Empty)
+                    DrawText("ng/mL", new Point(xStart + GetWellWidth() / 5, yStart + GetWellHeight() * 0.6), drawingContext);
         }
 
         private void DrawText(string str, Point point, DrawingContext drawingContext, int fontSize = 16)
@@ -360,5 +392,24 @@ namespace APDilution
             dilutionInfos = infos;
             InvalidateVisual();
         }
+
+        internal void SetBuffer(List<PipettingInfo> firstPlateBuffer, List<PipettingInfo> secondPlateBuffer)
+        {
+            this.firstPlateBuffer = firstPlateBuffer;
+            this.secondPlateBuffer = secondPlateBuffer;
+        }
+
+        internal void SetCurrentPlate(Plate2Show plate2Show)
+        {
+            this.plate2Show = plate2Show;
+            InvalidateVisual();
+        }
+    }
+
+    internal enum Plate2Show
+    {
+        dilution,
+        reaction1,
+        reaction2
     }
 }
