@@ -103,26 +103,26 @@ namespace APDilution
             for (int i = 0; i < rawDilutionInfos.Count; i++)
             {
                 int parallelCnt = 0;
-                int id = i + 1;
+                int firstWellID4Parallel = 0;
                 DilutionInfo rawDilutionInfo = rawDilutionInfos[i];
                 List<DilutionInfo> tmpDilutionInfos = GetDilutionInfos(rawDilutionInfo,
-                    stdParallelCnt, sampleParallelCnt, remainingWellIDs, ref parallelCnt);
+                    stdParallelCnt, sampleParallelCnt, remainingWellIDs, ref parallelCnt, ref firstWellID4Parallel);
                 if (parallelCnt > maxParallelCnt)
                     maxParallelCnt = parallelCnt;
                 //lastWellIDOccupied = 
-                bool isLastWellOfColumn = IsLastWellOfColumn(id);
+                bool isLastWellOfColumn = IsLastWellOfColumn(firstWellID4Parallel);
                 if (isLastWellOfColumn)
                 {
-                    lastWellIDOccupied = id + 8 * (maxParallelCnt - 1);
+                    lastWellIDOccupied = firstWellID4Parallel + 8 * (maxParallelCnt - 1);
                     remainingWellIDs.RemoveAll(x => x <= lastWellIDOccupied);
                     maxParallelCnt = 0;
                 }
 
-                if(Configurations.Instance.IsGradualPipetting && id == rawDilutionInfos.Count)//jump the whole columns
+                if (Configurations.Instance.IsGradualPipetting && (i+1) == rawDilutionInfos.Count)//jump the whole columns
                 {
-                    int regionID = (id + 7) / 8;
-                    int lastID = regionID * 8;
-                    lastWellIDOccupied = regionID * 8 * maxParallelCnt;
+                    int regionID = (firstWellID4Parallel + 7) / 8;
+                    int lastIDOfRegion = regionID * 8;
+                    lastWellIDOccupied = lastIDOfRegion + 8 * (maxParallelCnt - 1);
                     remainingWellIDs.RemoveAll(x => x <= lastWellIDOccupied);
                     maxParallelCnt = 0;
                 }
@@ -136,18 +136,20 @@ namespace APDilution
                 if (remainingWellIDs.Count / 24 < normalSamples.Count)
                     throw new Exception(string.Format("There are {0} wells remaining, not enough for {1} samples.", remainingWellIDs.Count, normalSamples.Count));
 
-                int wellID = remainingWellIDs.Min();
+                int normSartWellID = remainingWellIDs.Min();
                 foreach(var normalSample in normalSamples)
                 {
                     int gradualWellsNeeded = Utility.GetNeededGradualWellsCount(normalSample.dilutionTimes);
                     for (int i = 0; i < gradualWellsNeeded; i++)
                     {
-                        int firstWellID = wellID + i * 2;
-                        int secondWellID = wellID + i * 2 + 1;
-                        dilutionInfos.Add(new DilutionInfo(normalSample.type, normalSample.dilutionTimes, normalSample.seqIDinThisType, firstWellID,i+1));
-                        dilutionInfos.Add(new DilutionInfo(normalSample.type, normalSample.dilutionTimes, normalSample.seqIDinThisType, secondWellID, i + 1));
+                        for (int parallelOffSet = 0; parallelOffSet < sampleParallelCnt; parallelOffSet++ )
+                        {
+                            int wellID = normSartWellID + i * sampleParallelCnt + parallelOffSet;
+                            dilutionInfos.Add(new DilutionInfo(normalSample.type, normalSample.dilutionTimes, normalSample.seqIDinThisType, wellID, i + 1));
+                        }
+                       
                     }
-                    wellID += 24;
+                    normSartWellID += gradualWellsNeeded * sampleParallelCnt;
                 }
             }
             dilutionInfos = dilutionInfos.OrderBy(x => x.destWellID).ToList();
@@ -169,19 +171,22 @@ namespace APDilution
             int stdParallelCnt,
             int sampleParallelCnt,
             List<int> remainingWellIDs,
-            ref int parallelCnt)
+            ref int parallelCnt,
+            ref int firstWellID4Parallel)
         {
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
-            parallelCnt = sampleParallelCnt;
+            parallelCnt = stdParallelCnt;
             int dilutionTimes = rawDilutionInfo.dilutionTimes;
             string animalNo = rawDilutionInfo.animalNo;
             SampleType sampleType = rawDilutionInfo.type;
             int seqNo = rawDilutionInfo.seqIDinThisType;
-            int firstWellID = remainingWellIDs.Min();
-            
+            firstWellID4Parallel = remainingWellIDs.Min();
+            if (sampleType == SampleType.Norm)
+                parallelCnt = sampleParallelCnt;
+
             for(int i = 0; i< parallelCnt; i++)
             {
-                int wellID = firstWellID + i * 8;
+                int wellID = firstWellID4Parallel + i * 8;
                 if (!remainingWellIDs.Contains(wellID))
                     throw new Exception(string.Format("There is no well: {0} for sample {1}!",wellID,animalNo));
                 remainingWellIDs.Remove(wellID);
