@@ -159,9 +159,8 @@ namespace APDilution
             int yStart = (int)(row * GetWellHeight() + _szMargin.Height);
            
             //bool hangOver = IsSamePosition(col, row, ptCurrentWell);
-            if (!dilutionInfos.Exists(x => x.destWellID == wellID))
-                return;
-            Brush tmpBrush = GetBrush(wellID);
+         
+            
             Pen pen = defaultPen;
             bool selected = IsSamePosition(col, row, ptSelectedWell);
             if (selected)
@@ -171,9 +170,8 @@ namespace APDilution
                     OnSelectedWellChanged(GetDescription(new Point(xStart, yStart)));
             }
 
-            double height = GetWellHeight();
-            drawingContext.DrawRectangle(tmpBrush, pen,
-                    new Rect(new Point(xStart + 1, yStart + 1), new Size(GetWellWidth() - 1, height - 1)));
+            
+          
       
             switch(plate2Show)
             {
@@ -205,38 +203,59 @@ namespace APDilution
 
         private void DrawReaction(int wellID, int xStart, int yStart, DrawingContext drawingContext)
         {
+           
+          
             PipettingInfo pipettingInfo = null;
             var plateBuffer = plate2Show == Plate2Show.reaction1 ? firstPlateBuffer : secondPlateBuffer;
             if (plateBuffer == null || !plateBuffer.Exists(x => x.dstWellID == wellID))
                 return;
+            DrawColor(wellID, xStart, yStart, drawingContext);
             pipettingInfo = plateBuffer.Where(x => x.dstWellID == wellID).First();
             int xOffset = 10;
-            string txt = pipettingInfo.dilutionTimes.ToString();
+
+            string txt = pipettingInfo.animalNo;
+            string lowerTxt = pipettingInfo.dilutionTimes.ToString();
             DrawText(txt, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
+            DrawText(lowerTxt, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
+        }
+
+        private void DrawColor(int wellID, int xStart, int yStart, DrawingContext drawingContext)
+        {
+            Pen pen = defaultPen;
+            double height = GetWellHeight();
+            Brush tmpBrush = GetBrush(wellID);
+            drawingContext.DrawRectangle(tmpBrush, pen,
+                    new Rect(new Point(xStart + 1, yStart + 1), new Size(GetWellWidth() - 1, height - 1)));
         }
 
         private void DrawDilutionInfo(int wellID, int xStart, int yStart, DrawingContext drawingContext)
         {
-              var dilutionInfo = dilutionInfos.Where(x => x.destWellID == wellID).First();
-                string sType = dilutionInfo.type == SampleType.Norm ? "" : dilutionInfo.type.ToString();
-                string upperLine = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
-                if (Configurations.Instance.IsGradualPipetting && dilutionInfo.type == SampleType.Norm)
-                {
-                    upperLine = string.Format("{0}{1:D2}_{2}", sType, dilutionInfo.seqIDinThisType, dilutionInfo.gradualStep);
-                }
+            if (!dilutionInfos.Exists(x => x.destWellID == wellID))
+                return;
+            DrawColor(wellID, xStart, yStart, drawingContext);
+            var dilutionInfo = dilutionInfos.Where(x => x.destWellID == wellID).First();
+            string sType = dilutionInfo.type == SampleType.Norm ? "" : dilutionInfo.type.ToString();
+            string upperLine = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
+            if (Configurations.Instance.IsGradualPipetting && dilutionInfo.type == SampleType.Norm)
+            {
+                upperLine = string.Format("{0}{1:D2}_{2}", sType, dilutionInfo.seqIDinThisType, dilutionInfo.gradualStep);
+            }
 
-                string lowerLine = GetDilutionDescription(dilutionInfo);
-                int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
-                DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
-                DrawText(lowerLine, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
-                if (dilutionInfo.type != SampleType.Norm
-                    && dilutionInfo.type != SampleType.MatrixBlank
-                    && dilutionInfo.type != SampleType.Empty)
-                    DrawText("ng/mL", new Point(xStart + GetWellWidth() / 5, yStart + GetWellHeight() * 0.6), drawingContext);
+            string lowerLine = GetDilutionDescription(dilutionInfo);
+            int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
+            DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
+            DrawText(lowerLine, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
+            if (dilutionInfo.type != SampleType.Norm
+                && dilutionInfo.type != SampleType.MatrixBlank
+                && dilutionInfo.type != SampleType.Empty)
+                DrawText("ng/mL", new Point(xStart + GetWellWidth() / 5, yStart + GetWellHeight() * 0.6), drawingContext);
         }
 
         private void DrawText(string str, Point point, DrawingContext drawingContext, int fontSize = 16)
         {
+            if (str == null)
+                return;
+
             var txt = new FormattedText(
                str,
                System.Globalization.CultureInfo.CurrentCulture,
@@ -266,7 +285,9 @@ namespace APDilution
 
         private Brush GetBrush(int wellID)
         {
-            SampleType type = dilutionInfos.Where(x=>x.destWellID == wellID).First().type;
+
+            SampleType type = GetType(wellID);
+            
             Dictionary<SampleType, Brush> type_Brush = new Dictionary<SampleType, Brush>();
             type_Brush.Add(SampleType.Norm, Brushes.Green);
             type_Brush.Add(SampleType.MatrixBlank, Brushes.White);
@@ -276,6 +297,27 @@ namespace APDilution
             type_Brush.Add(SampleType.STD,Brushes.LightBlue);
             type_Brush.Add(SampleType.Empty, Brushes.LightGray);
             return type_Brush[type];
+        }
+
+        private SampleType GetType(int wellID)
+        {
+            SampleType type = SampleType.Empty;
+            switch(plate2Show)
+            {
+                case Plate2Show.dilution:
+                    type = dilutionInfos.Where(x => x.destWellID == wellID).First().type;
+                    break;
+                case Plate2Show.reaction1:
+                case Plate2Show.reaction2:
+                    var plateBuffer = plate2Show == Plate2Show.reaction1 ? firstPlateBuffer : secondPlateBuffer;
+                    if(plateBuffer.Exists(x => x.dstWellID == wellID))
+                        type = plateBuffer.Where(x => x.dstWellID == wellID).First().type;
+                    break;
+                default:
+                    throw new Exception("Not supported plate drawing.");
+            }
+            return type;
+            
         }
 
         private bool IsSamePosition(int col, int row, Point ptWell)
