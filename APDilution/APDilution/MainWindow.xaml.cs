@@ -79,7 +79,9 @@ namespace APDilution
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
             worklist wklist = new worklist();
-            wklist.DoJob(dilutionInfos, rawDilutionInfos,out firstPlateBuffer,out secondPlateBuffer);
+            var strs = wklist.DoJob(dilutionInfos, rawDilutionInfos,out firstPlateBuffer,out secondPlateBuffer);
+            sFile = Utility.GetOutputFolder() + "dilution.gwl";
+            File.WriteAllLines(sFile, strs);
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);
         }
 

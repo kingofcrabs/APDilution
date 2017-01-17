@@ -14,6 +14,8 @@ namespace APDilution
         Dictionary<string, List<int>> plateName_LastDilutionPositions = new Dictionary<string, List<int>>();
         const string firstDilutionPlateName = "Dilution1";
         const string secondDilutionPlateName = "Dilution2";
+
+        const string breakPrefix = "B;";
         GradualDilutionInfo gradualDilutionInfo = new GradualDilutionInfo();
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
         public List<string> DoJob(List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
@@ -47,15 +49,24 @@ namespace APDilution
             //from dilution to reaction plate
             List<PipettingInfo> transferPipettings = GenerateTransferPipettingInfos();
             List<string> strs = new List<string>();
+            strs.Add(GetComment("buffer"));
             strs.AddRange(Format(bufferPipettings,Configurations.Instance.BufferLiquidClass));
-            strs.Add("B;");
+            
+            //strs.Add(breakPrefix);
+            strs.Add(GetComment("sample"));
             strs.AddRange(Format(samplePipettings,Configurations.Instance.SampleLiquidClass));
-            strs.Add("B;");
+            
+            //strs.Add(breakPrefix);
+            strs.Add(GetComment("transfer"));
             strs.AddRange(Format(transferPipettings, Configurations.Instance.TransferLiquidClass));
-            strs.Add("B;");
+            //strs.Add(breakPrefix);
             return strs;
         }
 
+        protected string GetComment(string sComment)
+        {
+            return string.Format(breakPrefix + "Comment(\"{0}\");", sComment);
+        }
         private List<string> ProcessGradualDilution4StandardAndQC(List<DilutionInfo> rawDilutionInfos)
         {
             int currentWellID = 1;
@@ -151,8 +162,8 @@ namespace APDilution
             {
                 commands.Add(GetAspirate(pipettingInfo.srcLabware, pipettingInfo.srcWellID, pipettingInfo.vol, liquidClass));
                 commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
+                commands.Add("W;");
             }
-            commands.Add("W");
             return commands;
         }
 
