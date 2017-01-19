@@ -69,20 +69,16 @@ namespace APDilution
         private Configurations()
         {
             DilutionVolume = int.Parse(ConfigurationManager.AppSettings["DilutionVolume"]);
-            ReactionVolume = int.Parse(ConfigurationManager.AppSettings["ReactionVolume"]);
             BufferLiquidClass = ConfigurationManager.AppSettings["BufferLiquidClass"];
             SampleLiquidClass = ConfigurationManager.AppSettings["SampleLiquidClass"];
             TransferLiquidClass = ConfigurationManager.AppSettings["TransferLiquidClass"];
             GradualTimes = int.Parse(ConfigurationManager.AppSettings["GradualTimes"]);
             WorkingFolder = ConfigurationManager.AppSettings["WorkingFolder"];
-            GradualPlateName = ConfigurationManager.AppSettings["GradualPlateName"];
-            StandardQCSameTrough = bool.Parse(ConfigurationManager.AppSettings["StandardQCSameTrough"]);
-            BufferLabwareName = ConfigurationManager.AppSettings["BufferLabwareName"];
+            BufferLabwareName = "Buffer";
         }
 
         public void WriteResult(bool bSuccess, string errMsg)
         {
-
             string[] strs = new string[1];
             strs[0] = bSuccess.ToString();
             System.IO.File.WriteAllLines(Utility.GetOutputFolder() + "result.txt", strs);
@@ -118,10 +114,10 @@ namespace APDilution
 
         public string TransferLiquidClass { get; set; }
 
-        public string GradualPlateName { get; set; }
+        //public string GradualPlateName { get; set; }
 
         public string BufferLabwareName { get; set; }
 
-        public bool StandardQCSameTrough { get; set; } //whether standard & qc comes from same trough.
+        //public bool StandardQCSameTrough { get; set; } //whether standard & qc comes from same trough.
     }
 }

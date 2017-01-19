@@ -245,10 +245,8 @@ namespace APDilution
             int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
             DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
             DrawText(lowerLine, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
-            if (dilutionInfo.type != SampleType.Norm
-                && dilutionInfo.type != SampleType.MatrixBlank
-                && dilutionInfo.type != SampleType.Empty)
-                DrawText("ng/mL", new Point(xStart + GetWellWidth() / 5, yStart + GetWellHeight() * 0.6), drawingContext);
+            //if (dilutionInfo.type == SampleType.STD)
+            //    DrawText("ng/mL", new Point(xStart + GetWellWidth() / 5, yStart + GetWellHeight() * 0.6), drawingContext);
         }
 
         private void DrawText(string str, Point point, DrawingContext drawingContext, int fontSize = 16)
@@ -271,13 +269,15 @@ namespace APDilution
         {
             switch(dilutionInfo.type)
             {
-                case SampleType.Norm:
-                    return ((int)(dilutionInfo.dilutionTimes)).ToString();
-                case SampleType.STD:   
+                //case SampleType.Norm:
+                //    return (ExcelReader.OrgSTDConc/dilutionInfo.dilutionTimes).ToString();
+                case SampleType.STD:
+                    //return (ExcelReader.OrgSTDConc / dilutionInfo.dilutionTimes).ToString();
                 case SampleType.HQC:
                 case SampleType.LQC:
                 case SampleType.MQC:
-                    return  (100/dilutionInfo.dilutionTimes).ToString("0.00");
+                case SampleType.Norm:
+                    return ((int)(dilutionInfo.dilutionTimes)).ToString();
                 default:
                     return "";
             }

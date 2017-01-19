@@ -15,8 +15,9 @@ namespace APDilution
         const int startColNo = 9;
         const int rowCnt = 8;
         const int colCnt = 12;
-        int orgSTDConc = 100;
-
+        static public int OrgSTDConc {get;set;}
+        static public int STDParallelCnt { get; set; }
+        static public int SampleParallelCnt { get; set; }
         public List<DilutionInfo> Read(string sFilePath,ref List<DilutionInfo> rawDilutionInfo)
         {
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
@@ -61,12 +62,15 @@ namespace APDilution
             Workbook wb = app.Workbooks.Open(sFilePath);
             Worksheet ws = (Worksheet)wb.Worksheets.get_Item(1);
             int rowsint = ws.UsedRange.Cells.Rows.Count; //total rows
-            Range rngNormalSampleInfo = ws.Cells.get_Range("A2", "C" + rowsint);   //item
+            Range rngNormalSampleInfo = ws.Cells.get_Range("A2", "D" + rowsint);   //item
             Range rngStartConc = ws.Cells.get_Range("H1");
             Range rngSTDParallel = ws.Cells.get_Range("H2");
             Range rngSampleParallel = ws.Cells.get_Range("H3");
             int stdParallelCnt = int.Parse(rngSTDParallel.Value2.ToString());
             int sampleParallelCnt = int.Parse(rngSampleParallel.Value2.ToString());
+            STDParallelCnt = stdParallelCnt;
+            SampleParallelCnt = sampleParallelCnt;
+            OrgSTDConc = int.Parse(rngStartConc.Value2.ToString());
 
             Dictionary<int, NormalSampleInfo> sampleID_Info = new Dictionary<int, NormalSampleInfo>();
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
@@ -87,7 +91,13 @@ namespace APDilution
                 string animalNo = arryItem[i, 1].ToString();
                 int sampleID = int.Parse(arryItem[i, 2].ToString());
                 int dilutionTimes = int.Parse(arryItem[i, 3].ToString());
-                rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo), dilutionTimes, ParseSeqNo(animalNo), 0,1,animalNo));
+                if (arryItem.GetLength(1) < 4)
+                    throw new Exception(string.Format("动物号为：{0}的样本未设置原始体积！", animalNo));
+                string sVolume = arryItem[i, 4].ToString();
+             
+                uint volume = uint.Parse(sVolume);
+                rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),volume,
+                    dilutionTimes, ParseSeqNo(animalNo), 0,1,animalNo));
             }
 
             List<DilutionInfo> normalSamples = new List<DilutionInfo>();
@@ -145,7 +155,12 @@ namespace APDilution
                         for (int parallelOffSet = 0; parallelOffSet < sampleParallelCnt; parallelOffSet++ )
                         {
                             int wellID = normSartWellID + i * sampleParallelCnt + parallelOffSet;
-                            dilutionInfos.Add(new DilutionInfo(normalSample.type, normalSample.dilutionTimes, normalSample.seqIDinThisType, wellID, i + 1));
+                            dilutionInfos.Add(new DilutionInfo(normalSample.type,
+                                normalSample.orgVolume,
+                                normalSample.dilutionTimes, 
+                                normalSample.seqIDinThisType, 
+                                wellID, 
+                                i + 1));
                         }
                        
                     }
@@ -156,11 +171,11 @@ namespace APDilution
             return dilutionInfos;
         }
 
-        private DilutionInfo GetDilutionInfos(string animalNo,int sampleID,int dilutionTimes)
-        {
-            SampleType sampleType = ParseSampleType(animalNo);
-            return new DilutionInfo(sampleType, dilutionTimes, sampleID, 0);
-        }
+        //private DilutionInfo GetDilutionInfos(string animalNo,int sampleID,int dilutionTimes)
+        //{
+        //    SampleType sampleType = ParseSampleType(animalNo);
+        //    return new DilutionInfo(sampleType, dilutionTimes, sampleID, 0);
+        //}
 
         private bool IsLastWellOfColumn(int i)
         {
@@ -180,6 +195,7 @@ namespace APDilution
             string animalNo = rawDilutionInfo.animalNo;
             SampleType sampleType = rawDilutionInfo.type;
             int seqNo = rawDilutionInfo.seqIDinThisType;
+            uint orgVolume = rawDilutionInfo.orgVolume;
             firstWellID4Parallel = remainingWellIDs.Min();
             if (sampleType == SampleType.Norm)
                 parallelCnt = sampleParallelCnt;
@@ -190,7 +206,7 @@ namespace APDilution
                 if (!remainingWellIDs.Contains(wellID))
                     throw new Exception(string.Format("There is no well: {0} for sample {1}!",wellID,animalNo));
                 remainingWellIDs.Remove(wellID);
-                DilutionInfo dilutionInfo = new DilutionInfo(sampleType, dilutionTimes, seqNo, wellID, 1, animalNo);
+                DilutionInfo dilutionInfo = new DilutionInfo(sampleType,orgVolume, dilutionTimes, seqNo, wellID, 1, animalNo);
                 dilutionInfos.Add(dilutionInfo);
             }
             return dilutionInfos;
@@ -208,24 +224,24 @@ namespace APDilution
             return int.Parse(wellInfo);
         }
 
-        private double ParseDilutionTimes(string wellInfo, Dictionary<int, NormalSampleInfo> sampleID_Info)
-        {
-            if (wellInfo.Contains("Matrix"))
-                return 0;
+        //private double ParseDilutionTimes(string wellInfo, Dictionary<int, NormalSampleInfo> sampleID_Info)
+        //{
+        //    if (wellInfo.Contains("Matrix"))
+        //        return 0;
 
-            if (wellInfo.Contains("\n"))
-            {
-                string[] strs = wellInfo.Split('\n');
-                string content = strs[1];
-                content = content.ToLower();
-                content = content.Replace("ng/ml","");
-                return orgSTDConc/double.Parse(content);
-            }
-            else
-            {
-                return int.Parse(wellInfo);
-            }
-        }
+        //    if (wellInfo.Contains("\n"))
+        //    {
+        //        string[] strs = wellInfo.Split('\n');
+        //        string content = strs[1];
+        //        content = content.ToLower();
+        //        content = content.Replace("ng/ml","");
+        //        return OrgSTDConc/double.Parse(content);
+        //    }
+        //    else
+        //    {
+        //        return int.Parse(wellInfo);
+        //    }
+        //}
 
 
         private SampleType ParseSampleType(string sampleDescription)
@@ -312,7 +328,8 @@ namespace APDilution
         public int destWellID;
         public string animalNo;
         public int gradualStep;
-        public DilutionInfo(SampleType type, int dilutionTimes, int seqNo, int destWellID, int gradualStep = 1,string animalNo = "")
+        public uint orgVolume;
+        public DilutionInfo(SampleType type,uint orgVolume, int dilutionTimes, int seqNo, int destWellID, int gradualStep = 1,string animalNo = "")
         {
             this.type = type;
             this.dilutionTimes = dilutionTimes;
@@ -320,6 +337,7 @@ namespace APDilution
             seqIDinThisType = seqNo;
             this.animalNo = animalNo;
             this.gradualStep = gradualStep;
+            this.orgVolume = orgVolume;
         }
 
        

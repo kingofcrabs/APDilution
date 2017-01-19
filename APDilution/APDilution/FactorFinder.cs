@@ -45,12 +45,11 @@ namespace APDilution
                 return new List<int>() { 1 };
             if(Configurations.Instance.IsGradualPipetting)
                 return GetGradualFactors(dilutionTimes);
-
          
             //400's factors
             List<int> possibleFactors = new List<int>()
             {
-               2,5,10,20,25,40,50
+               2,3,5,10,20,25,40,50
             };
             FactorFinder finder = new FactorFinder();
             FactorInfo rootFactor = new FactorInfo(dilutionTimes);
@@ -78,7 +77,7 @@ namespace APDilution
                 throw new Exception("Cannot find factors for dilution times: " + dilutionTimes.ToString());
             int minSum = finalFactors.Min(x => x.factors.Sum());
             var best = finalFactors.Where(x => x.factors.Sum() == minSum).First();
-            return best.factors;
+            return best.factors.OrderByDescending(x=>x).ToList();
         }
 
         public List<int> GetGradualFactors(int dilutionTimes)
@@ -112,22 +111,21 @@ namespace APDilution
                     FactorInfo childInfo = new FactorInfo(factorInfo);
                     childInfo.factors.Add(possibleFactor);
                     childInfo.currentVal /= possibleFactor;
-                    if (childInfo.currentVal <= 50 )
+                    if (childInfo.currentVal <= 50 &&   //can find factor directly
+                        (childInfo.currentVal == 1 || possibleFactors.Contains(childInfo.currentVal)))
                     {
                         if(childInfo.currentVal == 1)
                         {
                             finalFactors.Add(childInfo);
                         }
-                        else if (possibleFactors.Contains(childInfo.currentVal))
+                        else
                         {
                             childInfo.factors.Add(childInfo.currentVal);
                             finalFactors.Add(childInfo);
                         }
-
                     }
-                    else
+                    else //need further process
                     {
-
                         childrenFactorInfos.Add(childInfo);
                     }
 
