@@ -52,7 +52,7 @@ namespace APDilution
             foreach(var dilutionInfo in dilutionInfos)
             {
                 if (!validTimes.Exists(x => x == dilutionInfo.dilutionTimes))
-                    throw new Exception(string.Format("分析号:{0}样品的稀释倍数：{1}非法！", dilutionInfo.animalNo, dilutionInfo.dilutionTimes));
+                    throw new Exception(string.Format("分析号:{0}样品的稀释倍数：{1}非法！", dilutionInfo.analysisNo, dilutionInfo.dilutionTimes));
             }
         }
 
@@ -74,12 +74,17 @@ namespace APDilution
 
             if(rngStartConc.Value2 == null)
                 throw new Exception("STD起始浓度未设置！");
+            
 
             int stdParallelCnt = int.Parse(rngSTDParallel.Value2.ToString());
             int sampleParallelCnt = int.Parse(rngSampleParallel.Value2.ToString());
+            OrgSTDConc = int.Parse(rngStartConc.Value2.ToString());
             STDParallelCnt = stdParallelCnt;
             SampleParallelCnt = sampleParallelCnt;
-            OrgSTDConc = int.Parse(rngStartConc.Value2.ToString());
+            if (STDParallelCnt < 2 || STDParallelCnt > 12)
+                throw new Exception("STD复孔数必须介于2~12之间！");
+            if(SampleParallelCnt < 2 || STDParallelCnt > 12)
+                throw new Exception("Sample复孔数必须介于2~12之间！");
 
             Dictionary<int, NormalSampleInfo> sampleID_Info = new Dictionary<int, NormalSampleInfo>();
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
@@ -108,6 +113,8 @@ namespace APDilution
                 rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),volume,
                     dilutionTimes, sampleID, 0, 1, animalNo));
             }
+            CheckDuplicated(rawDilutionInfos);
+           
 
             List<DilutionInfo> normalSamples = new List<DilutionInfo>();
             if(Configurations.Instance.IsGradualPipetting) //put normal samples to the end
@@ -180,6 +187,31 @@ namespace APDilution
             return dilutionInfos;
         }
 
+        private void CheckDuplicated(List<DilutionInfo> rawDilutionInfos)
+        {
+            List<string> analysisNos = rawDilutionInfos.Select(x => x.analysisNo).ToList();
+            CheckDuplicated(analysisNos,"分析号");
+            var stdSeqIDs = rawDilutionInfos.Where(x => x.type == SampleType.STD).Select(x => x.seqIDinThisType.ToString()).ToList();
+            var sampleSeqIDs = rawDilutionInfos.Where(x => x.type == SampleType.Norm).Select(x => x.seqIDinThisType.ToString()).ToList();
+            CheckDuplicated(stdSeqIDs, "STD序号");
+            CheckDuplicated(sampleSeqIDs, "Sample序号");
+        }
+
+        private void CheckDuplicated(List<string> strs,string strName)
+        {
+            for (int i = 0; i < strs.Count; i++)
+            {
+                var str = strs[i];
+                for (int j = i + 1; j < strs.Count; j++)
+                {
+                    if (strs[j] == str)
+                    {
+                        throw new Exception(string.Format("{0}:{1}重复！", strName,str));
+                    }
+                }
+            }
+        }
+
         //private DilutionInfo GetDilutionInfos(string animalNo,int sampleID,int dilutionTimes)
         //{
         //    SampleType sampleType = ParseSampleType(animalNo);
@@ -201,12 +233,12 @@ namespace APDilution
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             parallelCnt = stdParallelCnt;
             int dilutionTimes = rawDilutionInfo.dilutionTimes;
-            string animalNo = rawDilutionInfo.animalNo;
+            string animalNo = rawDilutionInfo.analysisNo;
             SampleType sampleType = rawDilutionInfo.type;
             int seqNo = rawDilutionInfo.seqIDinThisType;
             uint orgVolume = rawDilutionInfo.orgVolume;
             if (remainingWellIDs.Count == 0)
-                throw new Exception(string.Format("在进行到分析号为：{0}号样本时已经没有足够孔位。",rawDilutionInfo.animalNo));
+                throw new Exception(string.Format("在进行到分析号为：{0}号样本时已经没有足够孔位。",rawDilutionInfo.analysisNo));
             firstWellID4Parallel = remainingWellIDs.Min();
             if (sampleType == SampleType.Norm)
                 parallelCnt = sampleParallelCnt;
@@ -313,16 +345,17 @@ namespace APDilution
         public int dilutionTimes;
         public int seqIDinThisType;
         public int destWellID;
-        public string animalNo;
+        public string analysisNo;
         public int gradualStep;
         public uint orgVolume;
-        public DilutionInfo(SampleType type,uint orgVolume, int dilutionTimes, int seqNo, int destWellID, int gradualStep = 1,string animalNo = "")
+        public DilutionInfo(SampleType type,uint orgVolume, int dilutionTimes, int seqNo,
+            int destWellID, int gradualStep = 1,string analysisNo = "")
         {
             this.type = type;
             this.dilutionTimes = dilutionTimes;
             this.destWellID = destWellID;
             seqIDinThisType = seqNo;
-            this.animalNo = animalNo;
+            this.analysisNo = analysisNo;
             this.gradualStep = gradualStep;
             this.orgVolume = orgVolume;
         }

@@ -1,7 +1,7 @@
 ﻿<Window x:Class="APDilution.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Dilution" Height="700" Width="1150">
+        Title="Dilution" Icon="main.ico" Height="700" Width="1150">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>

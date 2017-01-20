@@ -15,7 +15,7 @@ namespace APDilution
             //D;;T01;A1;100000;
             foreach(var diluteInfo in parallelDilutionInfos)
             {
-                strs.Add(string.Format("D;;{0};{1};{2}",diluteInfo.animalNo,diluteInfo.destWellID,diluteInfo.dilutionTimes));
+                strs.Add(string.Format("D;;{0};{1};{2}",diluteInfo.analysisNo,diluteInfo.destWellID,diluteInfo.dilutionTimes));
             }
             strs.Add("L;");
             return strs;

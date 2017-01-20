@@ -47,7 +47,7 @@ namespace APDilution
             secondPlateBufferFlat = secondBufferFlat;
             Save2Excel(firstBufferFlat, secondBufferFlat);
             readableCommands = new List<string>();
-
+            readableCommands.Add("分析号,源Labware,源WellID,体积,目标Labware,目标WellID");
             //from dilution to reaction plate
             List<PipettingInfo> transferPipettings = GenerateTransferPipettingInfos();
             List<PipettingInfo> allPipettings = new List<PipettingInfo>();
@@ -297,7 +297,7 @@ namespace APDilution
                         for(int parallel = 0; parallel < 2; parallel++)
                         {
                             int dstWellID = startWellID + parallel;
-                            pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, tmpVol, 1, current.type, current.animalNo));
+                            pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, tmpVol, 1, current.type, current.analysisNo));
                         }
                     }
                 }
@@ -305,7 +305,7 @@ namespace APDilution
                 {
                     foreach (var dstWellID in destWells)
                     {
-                        pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, vol, 1, current.type, current.animalNo));
+                        pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, vol, 1, current.type, current.analysisNo));
                     }
                     index++;
                 }
@@ -424,7 +424,7 @@ namespace APDilution
                 GetWellID(columnIndex, indexInColumn),
                 sampleVolumes[0],
                 eachStepTimes[0],
-                dilutionInfo.type,dilutionInfo.animalNo);
+                dilutionInfo.type,dilutionInfo.analysisNo);
             pipettingInfos.Add(pipettingInfo);
             sampleVolumes = sampleVolumes.Skip(1).ToList();
             for (int i = 0; i < sampleVolumes.Count; i++)
@@ -436,7 +436,7 @@ namespace APDilution
                                                 GetWellID(columnIndex+1, indexInColumn),
                                                 vol,
                                                 eachStepTimes[i],
-                                                dilutionInfo.type,dilutionInfo.animalNo);
+                                                dilutionInfo.type,dilutionInfo.analysisNo);
                 columnIndex++;
                 pipettingInfos.Add(pipettingInfo);
             }
@@ -592,7 +592,7 @@ namespace APDilution
                         destPlateLabel,
                         dstWellID,
                         vol,
-                        wellTimes, dilutionInfo.type, dilutionInfo.animalNo));
+                        wellTimes, dilutionInfo.type, dilutionInfo.analysisNo));
                 else
                 {
                     string srcLabware = destPlateLabel;
@@ -607,7 +607,7 @@ namespace APDilution
                         srcWellID,
                         destPlateLabel,
                         dstWellID,
-                        vol, wellTimes, dilutionInfo.type, dilutionInfo.animalNo));
+                        vol, wellTimes, dilutionInfo.type, dilutionInfo.analysisNo));
                 }
                 srcWellIndex++;
             }
@@ -671,7 +671,7 @@ namespace APDilution
                 double thisWellTimes = eachStepTimes[i];
                 PipettingInfo pipettingInfo = new PipettingInfo(srcLabware, indexInColumn + 1,
                     destPlateLabel, GetWellID(columnIndex++, indexInColumn), vol,
-                    thisWellTimes, dilutionInfo.type,dilutionInfo.animalNo);
+                    thisWellTimes, dilutionInfo.type,dilutionInfo.analysisNo);
                 pipettingInfos.Add(pipettingInfo);
             }
             return pipettingInfos;
