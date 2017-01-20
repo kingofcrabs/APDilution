@@ -24,6 +24,39 @@ namespace APDilution
             return s.Substring(0, index) + "\\";
         }
 
+
+        public static void BackupFolder(string sourceDirectory, string destDirectory)
+        {
+            //获取所有文件名称
+            string[] fileName = Directory.GetFiles(sourceDirectory);
+
+            foreach (string filePath in fileName)
+            {
+                //根据每个文件名称生成对应的目标文件名称
+                string filePathTemp = destDirectory + "\\" + filePath.Substring(sourceDirectory.Length + 1);
+
+                //若不存在，直接复制文件；若存在，覆盖复制
+                if (File.Exists(filePathTemp))
+                {
+                    File.Copy(filePath, filePathTemp, true);
+                }
+                else
+                {
+                    File.Copy(filePath, filePathTemp);
+                }
+            }
+        }    
+
+        public static string GetHistoryFolder()
+        {
+            string sOutputFolder = GetExeParentFolder() + "History\\";
+            if (!Directory.Exists(sOutputFolder))
+            {
+                Directory.CreateDirectory(sOutputFolder);
+            }
+            return sOutputFolder;
+        }
+
         public static string GetOutputFolder()
         {
             string sOutputFolder = GetExeParentFolder() + "Output\\";

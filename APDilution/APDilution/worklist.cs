@@ -19,7 +19,8 @@ namespace APDilution
         GradualDilutionInfo gradualDilutionInfo = new GradualDilutionInfo();
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
         public List<string> DoJob(List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
-            out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat)
+            out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat, 
+            out List<string> readableCommands)
         {
             //plateName_LastDilutionPositions.Clear();
             //int parallelHoleCount = CountParallelHole(dilutionInfos);
@@ -45,27 +46,77 @@ namespace APDilution
             firstPlateBufferFlat = firstBufferFlat;
             secondPlateBufferFlat = secondBufferFlat;
             Save2Excel(firstBufferFlat, secondBufferFlat);
+            readableCommands = new List<string>();
 
             //from dilution to reaction plate
             List<PipettingInfo> transferPipettings = GenerateTransferPipettingInfos();
+            List<PipettingInfo> allPipettings = new List<PipettingInfo>();
             List<string> strs = new List<string>();
             strs.Add(GetComment("buffer"));
             strs.AddRange(Format(bufferPipettings,Configurations.Instance.BufferLiquidClass));
-            
+            allPipettings.AddRange(Flatten(bufferPipettings));
             //strs.Add(breakPrefix);
             strs.Add(GetComment("sample"));
+            allPipettings.AddRange(samplePipettings);
             //after each column's pipetting, shake 
             //get first plate
             var firstPlateSamplePipettings = samplePipettings.Where(x => x.dstLabware == firstDilutionPlateName).ToList();
             strs.AddRange(GetStringForEachColumn(firstPlateSamplePipettings, Configurations.Instance.SampleLiquidClass));
+            
             var secondPlateSamplePipettings = samplePipettings.Except(firstPlateSamplePipettings).ToList();
             strs.AddRange(GetStringForEachColumn(secondPlateSamplePipettings, Configurations.Instance.SampleLiquidClass));
             
             //strs.Add(breakPrefix);
             strs.Add(GetComment("transfer"));
+            allPipettings.AddRange(transferPipettings);
             strs.AddRange(Format(transferPipettings, Configurations.Instance.TransferLiquidClass));
-            //strs.Add(breakPrefix);
+            allPipettings = allPipettings.OrderBy(x => x.animalNo).ToList();
+            readableCommands.AddRange(FormatReadable(allPipettings));
             return strs;
+        }
+
+        private List<PipettingInfo> Flatten(List<List<PipettingInfo>> pipettingInfos)
+        {
+            List<PipettingInfo> oneDPipettingInfos = new List<PipettingInfo>();
+            foreach (var pipettings in pipettingInfos)
+            {
+                foreach (var pipetting in pipettings)
+                {
+                    oneDPipettingInfos.Add(pipetting);
+                }
+            }
+            return oneDPipettingInfos;
+        }
+
+        private IEnumerable<string> FormatReadable(List<PipettingInfo> pipettingInfos)
+        {
+            List<string> strs = new List<string>();
+            foreach (var pipetting in pipettingInfos)
+            {
+                strs.Add(FormatReadable(pipetting));
+            }
+            return strs;
+        }
+
+        private List<string> FormatReadable(List<List<PipettingInfo>> bufferPipettings)
+        {
+            List<string> strs = new List<string>();
+            foreach(var pipettings in bufferPipettings)
+            {
+                foreach(var pipetting in pipettings)
+                {
+                    strs.Add(FormatReadable(pipetting));
+                }
+            }
+            return strs;
+        }
+
+        private string FormatReadable(PipettingInfo pipettingInfo)
+        {
+            return string.Format("{0},{1},{2},{3},{4},{5}",
+                pipettingInfo.animalNo,
+                pipettingInfo.srcLabware,
+                pipettingInfo.srcWellID, pipettingInfo.vol, pipettingInfo.dstLabware, pipettingInfo.dstWellID);
         }
 
         private List<string> GetStringForEachColumn(List<PipettingInfo> firstPlateSamplePipettings, string liquidClass)
@@ -237,14 +288,16 @@ namespace APDilution
                     //closely layout 24*N normal samples
                     Console.WriteLine(current.destWellID);
                     int gradualWellsNeeded = Utility.GetNeededGradualWellsCount(current.dilutionTimes);
+                    var remainVol = vol * (Configurations.Instance.GradualTimes - 1) / Configurations.Instance.GradualTimes;
                     for (int i = 0; i < gradualWellsNeeded; i++)
                     {
+                        var tmpVol = i == gradualWellsNeeded - 1 ? vol : remainVol;
                         int startWellID = current.destWellID + i * 2;
                         srcWellID = srcPositionOnDilutionPlate[index++];
                         for(int parallel = 0; parallel < 2; parallel++)
                         {
                             int dstWellID = startWellID + parallel;
-                            pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, vol, 1, current.type,current.animalNo));
+                            pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, tmpVol, 1, current.type, current.animalNo));
                         }
                     }
                 }
@@ -693,14 +746,14 @@ namespace APDilution
         //    return vols;
         //}
 
-        private string FormatReadable(PipettingInfo pipettingInfo)
-        {
-            return string.Format("{0},{1},{2},{3},{4}",
-                pipettingInfo.srcLabware,
-                pipettingInfo.srcWellID,
-                pipettingInfo.dstLabware,
-                pipettingInfo.dstWellID, pipettingInfo.vol);
-        }
+        //private string FormatReadable(PipettingInfo pipettingInfo)
+        //{
+        //    return string.Format("{0},{1},{2},{3},{4}",
+        //        pipettingInfo.srcLabware,
+        //        pipettingInfo.srcWellID,
+        //        pipettingInfo.dstLabware,
+        //        pipettingInfo.dstWellID, pipettingInfo.vol);
+        //}
 
         public int needSrcWellCnt { get; set; }
     }

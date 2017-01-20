@@ -16,7 +16,7 @@
                 <RowDefinition Height="30"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Label>加样信息：</Label>
+            <Label>孔位信息：</Label>
             <Grid Grid.Row="1" Name="canvas">
                 
             </Grid>

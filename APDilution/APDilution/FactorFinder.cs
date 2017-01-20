@@ -132,16 +132,30 @@ namespace APDilution
                 }
             }
             return childrenFactorInfos;
-
         }
 
         public List<int> GetValidDilutionTimes()
         {
+            if(Configurations.Instance.IsGradualPipetting)
+            {
+                int times = Configurations.Instance.GradualTimes;
+                List<int> validTimes = new List<int>();
+                int curVal = 1;
+                for (int i = 0; i < 24; i++ )
+                {
+                    validTimes.Add(curVal);
+                    if (int.MaxValue / times > curVal)
+                        curVal *= times;
+                    else
+                        break;
+                }
+                return validTimes;
+            }
             List<int> possibleFactors = new List<int>()
             {
-               1,2,5,10,20,25,40,50
+               1,2,3,5,10,20,25,40,50
             };
-            HashSet<int> vals = new HashSet<int>() { 2, 5, 10, 20, 25, 40, 50 };
+            HashSet<int> vals = new HashSet<int>() { 2,3, 5, 10, 20, 25, 40, 50 };
             for (int i = 1; i < 4; i++)
             {
                 vals = GetCombination(vals, possibleFactors);

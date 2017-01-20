@@ -10,39 +10,39 @@ namespace APDilution.Tests
     [TestClass()]
     public class worklistTests
     {
-        [TestMethod()]
-        public void DoJobTest()
-        {
-            worklist worklist = new APDilution.worklist();
-            List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
-            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 1,1));
-            dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 2,2));
-            //worklist.DoJob(dilutionInfos);
-        }
+        //[TestMethod()]
+        //public void DoJobTest()
+        //{
+        //    worklist worklist = new APDilution.worklist();
+        //    List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 1,1));
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.Norm, 65000, 2,2));
+        //    //worklist.DoJob(dilutionInfos);
+        //}
 
-        [TestMethod()]
-        public void GenerateBufferPipettingInfosTest()
-        {
-            worklist worklist = new APDilution.worklist();
-            List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
-            dilutionInfos.Add(new DilutionInfo(SampleType.STD,27000,1,1));
-            dilutionInfos.Add(new DilutionInfo(SampleType.STD,400,2,2));
-            dilutionInfos.Add(new DilutionInfo(SampleType.STD,25,3,3));
-            //var pipettingInfoLists = worklist.GenerateBufferPipettingInfos();
-            //Assert.Fail();
-        }
+        //[TestMethod()]
+        //public void GenerateBufferPipettingInfosTest()
+        //{
+        //    worklist worklist = new APDilution.worklist();
+        //    List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.STD,27000,1,1));
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.STD,400,2,2));
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.STD,25,3,3));
+        //    //var pipettingInfoLists = worklist.GenerateBufferPipettingInfos();
+        //    //Assert.Fail();
+        //}
 
-        [TestMethod()]
-        public void GenerateSamplePipettingInfosTest()
-        {
-            worklist worklist = new APDilution.worklist();
-            List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
-            dilutionInfos.Add(new DilutionInfo(SampleType.STD, 100, 1,1));
-            dilutionInfos.Add(new DilutionInfo(SampleType.STD, 80, 2,2));
-            dilutionInfos.Add(new DilutionInfo(SampleType.STD, 40, 3,3));
-            //worklist.GenerateSamplePipettingInfos();
-            //Assert.Fail();
-        }
+        //[TestMethod()]
+        //public void GenerateSamplePipettingInfosTest()
+        //{
+        //    worklist worklist = new APDilution.worklist();
+        //    List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.STD, 100, 1,1));
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.STD, 80, 2,2));
+        //    dilutionInfos.Add(new DilutionInfo(SampleType.STD, 40, 3,3));
+        //    //worklist.GenerateSamplePipettingInfos();
+        //    //Assert.Fail();
+        //}
 
         //[TestMethod()]
         //public void GenerateSamplePipettingInfosTest2()

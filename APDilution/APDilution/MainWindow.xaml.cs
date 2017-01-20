@@ -48,8 +48,8 @@ namespace APDilution
 
             catch(Exception ex)
             {
-                string errMsg = "Error happened in generating worklist." + ex.Message;
-                txtInfo.Text = errMsg;
+                string errMsg = "在生成worklsit时发生错误: " + ex.Message;
+                SetErrorInfo(errMsg);
                 Configurations.Instance.WriteResult(false, errMsg);
                 return;
             }
@@ -74,31 +74,95 @@ namespace APDilution
             if (!File.Exists(sFile))
                 throw new Exception(string.Format("指定的excel文件：{0}不存在！", sFile));
             dilutionInfos = excelReader.Read(sFile, ref rawDilutionInfos);
-            txtInfo.Text = "Load excel file successfully.";
+            SetInfo(string.Format("加载文件：{0}成功！", args[1]));
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
             worklist wklist = new worklist();
-            var strs = wklist.DoJob(dilutionInfos, rawDilutionInfos,out firstPlateBuffer,out secondPlateBuffer);
+            List<string> readableWklists;
+            var strs = wklist.DoJob(dilutionInfos, rawDilutionInfos, out firstPlateBuffer, out secondPlateBuffer, out readableWklists);
             sFile = Utility.GetOutputFolder() + "dilution.gwl";
+            var sReadableFile = Utility.GetOutputFolder() + "readable.csv";
             File.WriteAllLines(sFile, strs);
+            File.WriteAllLines(sReadableFile, readableWklists);
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);
         }
+        private void Save2Image(FrameworkElement element,Size sz,string sFile)
+        {
+            element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            element.Arrange(new Rect(element.DesiredSize));
+            element.UpdateLayout();
 
-    
+            RenderTargetBitmap bitmap = new RenderTargetBitmap((int)sz.Width, (int)sz.Height,
+                                                                96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(element);
+
+            BitmapEncoder encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+            using (Stream s = File.OpenWrite(sFile))
+            {
+                encoder.Save(s);
+            }
+        }
+        
+        private void Backup()
+        {
+            string historyFolder = Utility.GetHistoryFolder() + DateTime.Now.ToString("yyyyMMdd") + "\\";
+            if (!Directory.Exists(historyFolder))
+                Directory.CreateDirectory(historyFolder);
+            string currentFolder = Utility.GetOutputFolder();
+            Utility.BackupFolder(currentFolder, historyFolder);
+        }
+     
+
         private void btnOk_Click(object sender, RoutedEventArgs e)
         {
+            try
+            {
+                Size sz = new Size(canvas.ActualWidth, canvas.ActualHeight);
+                plateViewer.SetCurrentPlate(Plate2Show.dilution);
+                Save2Image(plateViewer, sz, Utility.GetOutputFolder() + "dilution.png");
+                plateViewer.SetCurrentPlate(Plate2Show.reaction1);
+                Save2Image(plateViewer, sz, Utility.GetOutputFolder() + "reaction1.png");
+                plateViewer.SetCurrentPlate(Plate2Show.reaction2);
+                Save2Image(plateViewer, sz, Utility.GetOutputFolder() + "reaction2.png");
+                Backup(); 
+            }
+            catch(Exception ex)
+            {
+                SetErrorInfo(ex.Message);
+            }
+            
             this.Close();
         }
+
+        private void SetErrorInfo(string errMsg)
+        {
+            txtInfo.Text = errMsg;
+            txtInfo.Foreground = Brushes.Red;
+        }
+
+        private void SetInfo(string msg)
+        {
+            txtInfo.Text = msg;
+            txtInfo.Foreground = Brushes.Black;
+        }
+
         void lstPlateName_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (lstPlateName.SelectedIndex == -1)
                 return;
+            SwitchView(lstPlateName.SelectedIndex);
+        }
+
+        private void SwitchView(int index)
+        {
             Dictionary<int, Plate2Show> index_Name = new Dictionary<int, Plate2Show>();
             index_Name.Add(0, Plate2Show.dilution);
             index_Name.Add(1, Plate2Show.reaction1);
             index_Name.Add(2, Plate2Show.reaction2);
-            plateViewer.SetCurrentPlate(index_Name[lstPlateName.SelectedIndex]);
+            plateViewer.SetCurrentPlate(index_Name[index]);
         }
        
     }
