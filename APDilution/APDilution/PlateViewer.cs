@@ -36,8 +36,8 @@ namespace APDilution
             //this.MouseDown += new System.Windows.Input.MouseButtonEventHandler(MyFrameWorkElement_MouseDown);
             this.MouseUp += new System.Windows.Input.MouseButtonEventHandler(MyFrameWorkElement_MouseUp);
             this.MouseMove += new System.Windows.Input.MouseEventHandler(MyFrameWorkElement_MouseMove);
-
         }
+
 
         internal void SetNotUsed(List<int> wellIDs)
         {
@@ -55,8 +55,6 @@ namespace APDilution
             //sWellDesc = GetDescription(ptEnd);
             this.InvalidateVisual(); // cause a render
         }
-
-
         internal string GetDescription(Point curPt)
         {
             curPt.X += GetWellWidth() / 2;
@@ -132,9 +130,6 @@ namespace APDilution
             return wells;
         }
 
-
-
-
         private void DrawWells(DrawingContext drawingContext)
         {
             for (int i = 0; i < 96; i++)
@@ -152,15 +147,11 @@ namespace APDilution
 
         private void DrawWell(int wellID, DrawingContext drawingContext)
         {
-           
             int col, row;
             Convert(wellID, out col, out row);
             int xStart = (int)(col * GetWellWidth() + _szMargin.Width);
             int yStart = (int)(row * GetWellHeight() + _szMargin.Height);
-           
             //bool hangOver = IsSamePosition(col, row, ptCurrentWell);
-         
-            
             Pen pen = defaultPen;
             bool selected = IsSamePosition(col, row, ptSelectedWell);
             if (selected)
@@ -169,9 +160,6 @@ namespace APDilution
                 if (OnSelectedWellChanged != null)
                     OnSelectedWellChanged(GetDescription(new Point(xStart, yStart)));
             }
-
-            
-          
       
             switch(plate2Show)
             {
@@ -180,6 +168,7 @@ namespace APDilution
                     break;
                 case Plate2Show.reaction1:
                 case Plate2Show.reaction2:
+                    
                     DrawReaction(wellID,xStart,yStart,drawingContext);
                     break;
                 default:
@@ -203,20 +192,24 @@ namespace APDilution
 
         private void DrawReaction(int wellID, int xStart, int yStart, DrawingContext drawingContext)
         {
-           
-          
+            double width = GetWellWidth();
+            double height = GetWellHeight();
             PipettingInfo pipettingInfo = null;
             var plateBuffer = plate2Show == Plate2Show.reaction1 ? firstPlateBuffer : secondPlateBuffer;
             if (plateBuffer == null || !plateBuffer.Exists(x => x.dstWellID == wellID))
                 return;
             DrawColor(wellID, xStart, yStart, drawingContext);
             pipettingInfo = plateBuffer.Where(x => x.dstWellID == wellID).First();
+            bool firstBuffer = pipettingInfo.srcLabware == Configurations.Instance.Buffer1LabwareName;
+            if(firstBuffer)
+            {
+                drawingContext.DrawEllipse(null, new Pen(Brushes.Red, 2), new Point(xStart + width / 2, yStart + height / 2), width / 8, height / 8);
+            }
             int xOffset = 10;
-
             string txt = pipettingInfo.animalNo;
             string lowerTxt = pipettingInfo.dilutionTimes.ToString();
-            DrawText(txt, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);
-            DrawText(lowerTxt, new Point(xStart + xOffset, yStart + GetWellHeight() / 3), drawingContext);
+            DrawText(txt, new Point(xStart + xOffset / 3, yStart + height / 10), drawingContext, 16);
+            DrawText(lowerTxt, new Point(xStart + xOffset, yStart + height / 3), drawingContext);
         }
 
         private void DrawColor(int wellID, int xStart, int yStart, DrawingContext drawingContext)

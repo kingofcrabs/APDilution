@@ -119,9 +119,6 @@
     <Resource Include="history.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="tubes.ico" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="main.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -47,6 +47,14 @@ namespace APDilution
             if(dilutionInfos.Exists(x=>x.dilutionTimes > 6250000))
                 throw new Exception("稀释倍数必须不大于6.25M!");
 
+            foreach(var dilutionInfo in dilutionInfos)
+            {
+                if (dilutionInfo.orgVolume * dilutionInfo.dilutionTimes < Configurations.Instance.DilutionVolume)
+                {
+                    throw new Exception(string.Format("分析号为：{0}的样品体积太少，无法稀释到{1}", dilutionInfo.analysisNo, Configurations.Instance.DilutionVolume));
+                }
+            }
+
             FactorFinder factorFinder = new FactorFinder();
             var validTimes = factorFinder.GetValidDilutionTimes();
             foreach(var dilutionInfo in dilutionInfos)
@@ -62,7 +70,7 @@ namespace APDilution
             Workbook wb = app.Workbooks.Open(sFilePath);
             Worksheet ws = (Worksheet)wb.Worksheets.get_Item(1);
             int rowsint = ws.UsedRange.Cells.Rows.Count; //total rows
-            Range rngNormalSampleInfo = ws.Cells.get_Range("A2", "D" + rowsint);   //item
+            Range rngNormalSampleInfo = ws.Cells.get_Range("A2", "E" + rowsint);   //item
             Range rngStartConc = ws.Cells.get_Range("H1");
             Range rngSTDParallel = ws.Cells.get_Range("H2");
             Range rngSampleParallel = ws.Cells.get_Range("H3");
@@ -105,13 +113,14 @@ namespace APDilution
                 string animalNo = arryItem[i, 1].ToString();
                 int sampleID = int.Parse(arryItem[i, 2].ToString());
                 int dilutionTimes = int.Parse(arryItem[i, 3].ToString());
-                if (arryItem.GetLength(1) < 4)
-                    throw new Exception(string.Format("动物号为：{0}的样本未设置原始体积！", animalNo));
+                
+                if (arryItem.GetLength(1) < 5)
+                    throw new Exception(string.Format("动物号为：{0}的样本信息不全！", animalNo));
                 string sVolume = arryItem[i, 4].ToString();
-             
+                int mrdDilutionTimes = int.Parse(arryItem[i, 5].ToString());
                 uint volume = uint.Parse(sVolume);
                 rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),volume,
-                    dilutionTimes, sampleID, 0, 1, animalNo));
+                    dilutionTimes,mrdDilutionTimes, sampleID, 0, 1, animalNo));
             }
             CheckDuplicated(rawDilutionInfos);
            
@@ -152,7 +161,6 @@ namespace APDilution
                     remainingWellIDs.RemoveAll(x => x <= lastWellIDOccupied);
                     maxParallelCnt = 0;
                 }
-
                 dilutionInfos.AddRange(tmpDilutionInfos);
             }
 
@@ -174,6 +182,7 @@ namespace APDilution
                             dilutionInfos.Add(new DilutionInfo(normalSample.type,
                                 normalSample.orgVolume,
                                 normalSample.dilutionTimes, 
+                                normalSample.mrdDilutionTimes,
                                 normalSample.seqIDinThisType, 
                                 wellID, 
                                 i + 1));
@@ -233,12 +242,21 @@ namespace APDilution
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             parallelCnt = stdParallelCnt;
             int dilutionTimes = rawDilutionInfo.dilutionTimes;
+            int mrdDilutionTimes = rawDilutionInfo.mrdDilutionTimes;
+
+            if (mrdDilutionTimes != 1 && dilutionTimes % mrdDilutionTimes != 0)
+            {
+                throw new Exception(string.Format("分析号{0}的稀释倍数{1}不能整除mrd倍数{2}",
+                    rawDilutionInfo.analysisNo, dilutionTimes, mrdDilutionTimes));
+            }
+
             string animalNo = rawDilutionInfo.analysisNo;
             SampleType sampleType = rawDilutionInfo.type;
             int seqNo = rawDilutionInfo.seqIDinThisType;
             uint orgVolume = rawDilutionInfo.orgVolume;
             if (remainingWellIDs.Count == 0)
-                throw new Exception(string.Format("在进行到分析号为：{0}号样本时已经没有足够孔位。",rawDilutionInfo.analysisNo));
+                throw new Exception(string.Format("在进行到分析号为：{0}号样本时已经没有足够孔位。",
+                    rawDilutionInfo.analysisNo));
             firstWellID4Parallel = remainingWellIDs.Min();
             if (sampleType == SampleType.Norm)
                 parallelCnt = sampleParallelCnt;
@@ -249,13 +267,13 @@ namespace APDilution
                 if (!remainingWellIDs.Contains(wellID))
                     throw new Exception(string.Format("样品：{0}需要孔位：{1}",animalNo,wellID));
                 remainingWellIDs.Remove(wellID);
-                DilutionInfo dilutionInfo = new DilutionInfo(sampleType,orgVolume, dilutionTimes, seqNo, wellID, 1, animalNo);
+                DilutionInfo dilutionInfo = new DilutionInfo(sampleType,orgVolume,
+                    dilutionTimes, mrdDilutionTimes,
+                    seqNo, wellID, 1, animalNo);
                 dilutionInfos.Add(dilutionInfo);
             }
             return dilutionInfos;
         }
-
-       
 
         private int ParseSeqNo(string wellInfo)
         {
@@ -343,15 +361,17 @@ namespace APDilution
     {
         public SampleType type;
         public int dilutionTimes;
+        public int mrdDilutionTimes;
         public int seqIDinThisType;
         public int destWellID;
         public string analysisNo;
         public int gradualStep;
         public uint orgVolume;
-        public DilutionInfo(SampleType type,uint orgVolume, int dilutionTimes, int seqNo,
+        public DilutionInfo(SampleType type,uint orgVolume, int dilutionTimes, int mrdTimes, int seqNo,
             int destWellID, int gradualStep = 1,string analysisNo = "")
         {
             this.type = type;
+            this.mrdDilutionTimes = mrdTimes;
             this.dilutionTimes = dilutionTimes;
             this.destWellID = destWellID;
             seqIDinThisType = seqNo;

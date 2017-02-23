@@ -38,7 +38,11 @@ namespace APDilution
     }
     class FactorFinder
     {
-
+        List<int> possibleFactors = new List<int>()
+            {
+               50,40,25,20,16,10,8,5,4,2
+            };
+        
         public List<int> GetBestFactors(int dilutionTimes)
         {
             if (dilutionTimes == 1)
@@ -47,10 +51,7 @@ namespace APDilution
                 return GetGradualFactors(dilutionTimes);
          
             //400's factors
-            List<int> possibleFactors = new List<int>()
-            {
-               2,3,5,10,20,25,40,50
-            };
+           
             FactorFinder finder = new FactorFinder();
             FactorInfo rootFactor = new FactorInfo(dilutionTimes);
             List<FactorInfo> childrenFactor = new List<FactorInfo>();
@@ -151,14 +152,16 @@ namespace APDilution
                 }
                 return validTimes;
             }
-            List<int> possibleFactors = new List<int>()
-            {
-               1,2,3,5,10,20,25,40,50
-            };
-            HashSet<int> vals = new HashSet<int>() { 2,3, 5, 10, 20, 25, 40, 50 };
+            //List<int> possibleFactors = new List<int>()
+            //{
+            //   1,2,4,5,8,10,20,25,40,50
+            //};
+            List<int> factorsWithOne = new List<int>(possibleFactors);
+            factorsWithOne.Add(1);
+            HashSet<int> vals = new HashSet<int>(possibleFactors);
             for (int i = 1; i < 4; i++)
             {
-                vals = GetCombination(vals, possibleFactors);
+                vals = GetCombination(vals, factorsWithOne);
             }
             vals.Add(1);
             var orderedVals = vals.OrderBy(x => x).ToList();

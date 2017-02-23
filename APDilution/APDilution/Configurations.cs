@@ -107,7 +107,8 @@ namespace APDilution
             TransferLiquidClass = ConfigurationManager.AppSettings["TransferLiquidClass"];
             GradualTimes = int.Parse(ConfigurationManager.AppSettings["GradualTimes"]);
             WorkingFolder = ConfigurationManager.AppSettings["WorkingFolder"];
-            BufferLabwareName = "Buffer";
+            Buffer1LabwareName = "Buffer1";
+            Buffer2LabwareName = "Buffer2";
         }
 
         public void WriteResult(bool bSuccess, string errMsg)
@@ -149,7 +150,8 @@ namespace APDilution
 
         //public string GradualPlateName { get; set; }
 
-        public string BufferLabwareName { get; set; }
+        public string Buffer1LabwareName { get; set; }
+        public string Buffer2LabwareName { get; set; }
 
         //public bool StandardQCSameTrough { get; set; } //whether standard & qc comes from same trough.
     }

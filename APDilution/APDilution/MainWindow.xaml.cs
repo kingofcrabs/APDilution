@@ -82,11 +82,19 @@ namespace APDilution
             List<string> readableWklists;
             var strs = wklist.DoJob(dilutionInfos, rawDilutionInfos, out firstPlateBuffer, out secondPlateBuffer, out readableWklists);
             sFile = Utility.GetOutputFolder() + "dilution.gwl";
+            string tplFile = Utility.GetOutputFolder() + "current.tpl";
+            TPLFile.Generate(tplFile, dilutionInfos);
+
+
             var sReadableFile = Utility.GetOutputFolder() + "readable.csv";
             File.WriteAllLines(sFile, strs);
             File.WriteAllLines(sReadableFile, readableWklists);
+            
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);
         }
+
+       
+
         private void Save2Image(FrameworkElement element,Size sz,string sFile)
         {
             element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
