@@ -33,8 +33,6 @@ namespace APDilution
             lstPlateName.SelectionChanged += lstPlateName_SelectionChanged;
         }
 
-     
-
         void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             this.Title = string.Format("Dilution {0}",strings.version);
@@ -71,8 +69,26 @@ namespace APDilution
                 throw new Exception("命令行第二个参数必须为'G'！");
             }
             string sFile = folder + args[1] + ".xlsx";
+
+            string fileName = args[1];
+            string sBatchNum = "";
+            foreach(var ch in fileName)
+            {
+                if (Char.IsDigit(ch))
+                    sBatchNum += ch;
+            }
+            if (sBatchNum == "")
+                throw new Exception("未指定批次号！");
+            int batchNum = 0;
+            bool bok = int.TryParse(sBatchNum, out batchNum);
+            if(!bok)
+                throw new Exception("未指定批次号！");
+
             if (!File.Exists(sFile))
                 throw new Exception(string.Format("指定的excel文件：{0}不存在！", sFile));
+            string assayName = fileName.Substring(0, fileName.Length - sBatchNum.Length);
+            var reactionBarcodes = GetBatchBarcodes(batchNum);
+
             dilutionInfos = excelReader.Read(sFile, ref rawDilutionInfos);
             SetInfo(string.Format("加载文件：{0}成功！", args[1]));
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
@@ -80,17 +96,38 @@ namespace APDilution
             canvas.Children.Add(plateViewer);
             worklist wklist = new worklist();
             List<string> readableWklists;
-            var strs = wklist.DoJob(dilutionInfos, rawDilutionInfos, out firstPlateBuffer, out secondPlateBuffer, out readableWklists);
+            var strs = wklist.DoJob(assayName, reactionBarcodes,
+                dilutionInfos, rawDilutionInfos, 
+                out firstPlateBuffer, 
+                out secondPlateBuffer, 
+                out readableWklists);
             sFile = Utility.GetOutputFolder() + "dilution.gwl";
             string tplFile = Utility.GetOutputFolder() + "current.tpl";
             TPLFile.Generate(tplFile, dilutionInfos);
-
 
             var sReadableFile = Utility.GetOutputFolder() + "readable.csv";
             File.WriteAllLines(sFile, strs);
             File.WriteAllLines(sReadableFile, readableWklists);
             
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);
+        }
+
+        private List<string> GetBatchBarcodes(int batchNum)
+        {
+            string barcodeFile = Configurations.Instance.WorkingFolder + "barcodes.txt";
+            if (!File.Exists(barcodeFile))
+                throw new Exception(string.Format("找不到位于：{0}条码文件：", barcodeFile));
+            var strs = File.ReadAllLines(barcodeFile);
+            if(batchNum * 2 > strs.Length)
+            {
+                throw new Exception("找不到批次号对应的反应板条码！");
+            }
+            int startIndex = (batchNum - 1)*2;
+            List<string> barcodes = new List<string>();
+            barcodes.Add(strs[startIndex]);
+            barcodes.Add(strs[startIndex+1]);
+            return barcodes;
+
         }
 
        

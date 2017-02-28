@@ -69,6 +69,7 @@
     <Compile Include="Configurations.cs" />
     <Compile Include="ExcelWriter.cs" />
     <Compile Include="FactorFinder.cs" />
+    <Compile Include="Helper.cs" />
     <Compile Include="Properties\strings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

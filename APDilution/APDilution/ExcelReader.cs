@@ -106,25 +106,30 @@ namespace APDilution
             int lastWellIDOccupied = 1;
             int maxParallelCnt = 0;
             rawDilutionInfos = new List<DilutionInfo>();
+            int expectedColumnCnt = Configurations.Instance.IsGradualPipetting ? 3 : 5;
             for (int i = 1; i <= rowsint - 1; i++)
             {
+                
                 if (arryItem[i, 1] == null)
                     break;
                 string animalNo = arryItem[i, 1].ToString();
+                if (arryItem.GetLength(1) < expectedColumnCnt)
+                    throw new Exception(string.Format("动物号为：{0}的样本信息不全！", animalNo));
+
                 int sampleID = int.Parse(arryItem[i, 2].ToString());
                 int dilutionTimes = int.Parse(arryItem[i, 3].ToString());
-                
-                if (arryItem.GetLength(1) < 5)
-                    throw new Exception(string.Format("动物号为：{0}的样本信息不全！", animalNo));
-                string sVolume = arryItem[i, 4].ToString();
-                int mrdDilutionTimes = int.Parse(arryItem[i, 5].ToString());
+                string sVolume = ((int)Configurations.Instance.DilutionVolume).ToString();
+                int mrdDilutionTimes = 1;
+                if(!Configurations.Instance.IsGradualPipetting)
+                {
+                    sVolume = arryItem[i, 4].ToString();
+                    mrdDilutionTimes = int.Parse(arryItem[i, 5].ToString());
+                }
                 uint volume = uint.Parse(sVolume);
                 rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),volume,
                     dilutionTimes,mrdDilutionTimes, sampleID, 0, 1, animalNo));
             }
             CheckDuplicated(rawDilutionInfos);
-           
-
             List<DilutionInfo> normalSamples = new List<DilutionInfo>();
             if(Configurations.Instance.IsGradualPipetting) //put normal samples to the end
             {

@@ -206,7 +206,7 @@ namespace APDilution
                 drawingContext.DrawEllipse(null, new Pen(Brushes.Red, 2), new Point(xStart + width / 2, yStart + height / 2), width / 8, height / 8);
             }
             int xOffset = 10;
-            string txt = pipettingInfo.animalNo;
+            string txt = pipettingInfo.analysisNo;
             string lowerTxt = pipettingInfo.dilutionTimes.ToString();
             DrawText(txt, new Point(xStart + xOffset / 3, yStart + height / 10), drawingContext, 16);
             DrawText(lowerTxt, new Point(xStart + xOffset, yStart + height / 3), drawingContext);
