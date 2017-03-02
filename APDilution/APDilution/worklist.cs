@@ -18,14 +18,12 @@ namespace APDilution
         const string breakPrefix = "B;";
         GradualDilutionInfo gradualDilutionInfo = new GradualDilutionInfo();
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
-        public List<string> DoJob(string assayName, List<string> reactionBarcodes,
+        public List<string> DoJob(string assayName, string reactionBarcode,
             List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
             out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat, 
             out List<string> readableCommands)
         {
-            //plateName_LastDilutionPositions.Clear();
-            //int parallelHoleCount = CountParallelHole(dilutionInfos);
-            //this.dilutionInfos = FilterParallel(dilutionInfos);
+            
             firstPlateBufferFlat = null;
             secondPlateBufferFlat = null;
             this.rawDilutionInfos = rawDilutionInfos;

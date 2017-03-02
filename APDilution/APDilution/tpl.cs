@@ -8,7 +8,7 @@ namespace APDilution
 {
     class TPLFile
     {
-        static public void Generate(string sFile, List<DilutionInfo> dilutionInfos)
+        static public void Generate(string sFile,List<DilutionInfo> dilutionInfos)
         {
             List<string> strs = new List<string>();
             //H;31-03-16;15:20:50

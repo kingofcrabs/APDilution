@@ -31,6 +31,7 @@ namespace APDilution
             Configurations.Instance.WriteResult(false, "Init");
             lstPlateName.SelectedIndex = 0;
             lstPlateName.SelectionChanged += lstPlateName_SelectionChanged;
+            
         }
 
         void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -68,65 +69,77 @@ namespace APDilution
             {
                 throw new Exception("命令行第二个参数必须为'G'！");
             }
-            string sFile = folder + args[1] + ".xlsx";
-
+      
+            string assayName = "";
+            string reactionBarcode = "";
             string fileName = args[1];
-            string sBatchNum = "";
-            foreach(var ch in fileName)
-            {
-                if (Char.IsDigit(ch))
-                    sBatchNum += ch;
-            }
-            if (sBatchNum == "")
-                throw new Exception("未指定批次号！");
-            int batchNum = 0;
-            bool bok = int.TryParse(sBatchNum, out batchNum);
-            if(!bok)
-                throw new Exception("未指定批次号！");
-
+            int batchID = 0;
+            GetBarcodesAndAssayName(fileName, ref assayName, ref reactionBarcode, ref batchID);
+            
+            string sFile = folder + args[1] + ".xlsx";
             if (!File.Exists(sFile))
                 throw new Exception(string.Format("指定的excel文件：{0}不存在！", sFile));
-            string assayName = fileName.Substring(0, fileName.Length - sBatchNum.Length);
-            var reactionBarcodes = GetBatchBarcodes(batchNum);
 
             dilutionInfos = excelReader.Read(sFile, ref rawDilutionInfos);
-            SetInfo(string.Format("加载文件：{0}成功！", args[1]));
+            SetInfo(string.Format("加载文件：{0}成功！\r\n专题号：{1}\r\n批次号:{2}\r\n反应板条码{3}", 
+                args[1], assayName, batchID,reactionBarcode));
+            
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
             worklist wklist = new worklist();
             List<string> readableWklists;
-            var strs = wklist.DoJob(assayName, reactionBarcodes,
+            var strs = wklist.DoJob(assayName, reactionBarcode,
                 dilutionInfos, rawDilutionInfos, 
                 out firstPlateBuffer, 
                 out secondPlateBuffer, 
                 out readableWklists);
             sFile = Utility.GetOutputFolder() + "dilution.gwl";
-            string tplFile = Utility.GetOutputFolder() + "current.tpl";
+            string assayFolder = Utility.GetAssayFolder(assayName);
+            string tplFile = assayFolder + string.Format("{0}.tpl", batchID);
             TPLFile.Generate(tplFile, dilutionInfos);
 
-            var sReadableFile = Utility.GetOutputFolder() + "readable.csv";
+            var sReadableFile = assayFolder + string.Format("readable{0}.csv",batchID);
             File.WriteAllLines(sFile, strs);
             File.WriteAllLines(sReadableFile, readableWklists);
             
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);
         }
 
-        private List<string> GetBatchBarcodes(int batchNum)
+        private void GetBarcodesAndAssayName(string fileName, ref string assayName, ref string reactionBarcode,ref int batchID)
         {
-            string barcodeFile = Configurations.Instance.WorkingFolder + "barcodes.txt";
+            string sBatchNum = "";
+            for (int i = fileName.Length - 1; i >= 0; i--)
+            {
+                char ch = fileName[i];
+                if (Char.IsDigit(ch))
+                    sBatchNum += ch;
+                else
+                    break;
+            }
+            if (sBatchNum == "")
+                throw new Exception("未指定批次号！");
+
+            bool bok = int.TryParse(sBatchNum, out batchID);
+            if (!bok)
+                throw new Exception("未指定批次号！");
+
+            assayName = fileName.Substring(0, fileName.Length - sBatchNum.Length);
+            reactionBarcode = GetBatchBarcode(batchID);
+        }
+
+        private string GetBatchBarcode(int batchNum)
+        {
+            string barcodeFile = Helper.GetOutputFolder() + "barcodes.txt";
             if (!File.Exists(barcodeFile))
                 throw new Exception(string.Format("找不到位于：{0}条码文件：", barcodeFile));
             var strs = File.ReadAllLines(barcodeFile);
-            if(batchNum * 2 > strs.Length)
+            if(batchNum > strs.Length)
             {
                 throw new Exception("找不到批次号对应的反应板条码！");
             }
-            int startIndex = (batchNum - 1)*2;
-            List<string> barcodes = new List<string>();
-            barcodes.Add(strs[startIndex]);
-            barcodes.Add(strs[startIndex+1]);
-            return barcodes;
+            int startIndex = batchNum - 1;
+            return strs[startIndex];
 
         }
 

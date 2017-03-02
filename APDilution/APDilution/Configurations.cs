@@ -72,6 +72,16 @@ namespace APDilution
             int wellsNeeded = (int)Math.Ceiling(Math.Log(times, gradualTimes));
             return wellsNeeded;
         }
+
+        internal static string GetAssayFolder(string assayName)
+        {
+            string assayFolder = GetOutputFolder() + assayName + "\\";
+            if (!Directory.Exists(assayFolder))
+            {
+                Directory.CreateDirectory(assayFolder);
+            }
+            return assayFolder;
+        }
     }
     class Configurations
     {
