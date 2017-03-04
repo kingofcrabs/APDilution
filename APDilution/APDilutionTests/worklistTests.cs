@@ -11,13 +11,19 @@ namespace APDilution.Tests
     public class worklistTests
     {
         [TestMethod()]
-        public void GetEachStepVolume()
+        public void TestSplitVolume()
         {
-            worklist worklist = new APDilution.worklist();
-            List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
-            //worklist.GetEachStepVolume(10,20,)
-           //private List<int> GetEachStepVolume(int times, uint sampleVol, bool isBuffer,ref  List<int> eachStepTimes)
-            //worklist.DoJob(dilutionInfos);
+
+            List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
+            pipettingInfos.Add(new PipettingInfo("src", 1, "dst", 1, 250, 1, SampleType.Norm, "1"));
+            pipettingInfos.Add(new PipettingInfo("src", 2, "dst", 2, 360, 1, SampleType.Norm, "2"));
+            pipettingInfos.Add(new PipettingInfo("src", 3, "dst", 3, 190, 1, SampleType.Norm, "3"));
+            pipettingInfos.Add(new PipettingInfo("src", 4, "dst", 6, 120, 1, SampleType.Norm, "4"));
+            pipettingInfos.Add(new PipettingInfo("src", 5, "dst", 7, 380, 1, SampleType.Norm, "5"));
+            worklist wklist = new worklist();
+            pipettingInfos = wklist.SplitByVolume(pipettingInfos);
+            Assert.AreEqual(pipettingInfos[1].vol, 70);
+
         }
 
       

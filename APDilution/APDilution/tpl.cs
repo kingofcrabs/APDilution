@@ -21,10 +21,17 @@ namespace APDilution
             {
                 string sType = dilutionInfo.type.ToString();
                 string desc = string.Format("{0}{1:D2}", sType, dilutionInfo.seqIDinThisType);
-                strs.Add(string.Format("D;;{0};{1};{2};", desc, dilutionInfo.destWellID, dilutionInfo.dilutionTimes));
+                strs.Add(string.Format("D;;{0};{1};{2};", desc, GetWellDesc(dilutionInfo.destWellID), dilutionInfo.dilutionTimes));
             }
             strs.Add("L;");
             File.WriteAllLines(sFile, strs);
+        }
+
+        private static string GetWellDesc(int wellID)
+        {
+            int colIndex = (wellID - 1) / 8;
+            int rowIndex = wellID - colIndex * 8 - 1;
+            return string.Format("{0}{1}", (char)('A' + rowIndex), colIndex + 1);
         }
     }
 }

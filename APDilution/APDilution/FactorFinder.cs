@@ -58,7 +58,7 @@ namespace APDilution
             List<FactorInfo> finalFactors = new List<FactorInfo>();
             childrenFactor = finder.GetFactors(rootFactor, possibleFactors, finalFactors);
             List<FactorInfo> thisStepFactorInfos = new List<FactorInfo>();
-            for (int i = 1; i < 4; i++) //4 steps
+            for (int i = 1; i < Configurations.Instance.DilutionWells; i++) //4 or 6 steps
             {
                 thisStepFactorInfos = new List<FactorInfo>();
                 RemoveDuplicated(finalFactors);
@@ -159,7 +159,7 @@ namespace APDilution
             List<int> factorsWithOne = new List<int>(possibleFactors);
             factorsWithOne.Add(1);
             HashSet<int> vals = new HashSet<int>(possibleFactors);
-            for (int i = 1; i < 4; i++)
+            for (int i = 1; i < Configurations.Instance.DilutionWells; i++)
             {
                 vals = GetCombination(vals, factorsWithOne);
             }

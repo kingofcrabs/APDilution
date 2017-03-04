@@ -107,6 +107,10 @@ namespace APDilution
                 var cmdLines = Environment.GetCommandLineArgs();
                 return cmdLines.Count() > 2 && cmdLines[2] == "G"; // gradual pipetting
             }
+            set
+            {
+                isGradual = value;
+            }
         }
 
         private Configurations()
@@ -120,6 +124,9 @@ namespace APDilution
             Buffer1LabwareName = "Buffer1";
             Buffer2LabwareName = "Buffer2";
             GradualPlateName = "Gradual";
+            DilutionWells = int.Parse(ConfigurationManager.AppSettings["DilutionWells"]);
+            TipVolume = int.Parse(ConfigurationManager.AppSettings["TipVolume"]);
+            StandardGradual = bool.Parse(ConfigurationManager.AppSettings["StandardGradual"]);
         }
 
         public void WriteResult(bool bSuccess, string errMsg)
@@ -150,6 +157,8 @@ namespace APDilution
                 return "Reaction";
             }
         }
+
+        public int TipVolume { get; set; }
         public int DilutionVolume { get; set; }
         public string BufferLiquidClass { get; set; }
 
@@ -157,6 +166,7 @@ namespace APDilution
 
         public string TransferLiquidClass { get; set; }
 
+        public int DilutionWells { get; set; }
 
         public string Buffer1LabwareName { get; set; }
         public string Buffer2LabwareName { get; set; }
@@ -164,5 +174,7 @@ namespace APDilution
         //public bool StandardQCSameTrough { get; set; } //whether standard & qc comes from same trough.
 
         public string GradualPlateName { get; set; }
+
+        public bool StandardGradual { get; set; }
     }
 }

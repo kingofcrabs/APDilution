@@ -15,6 +15,7 @@ namespace APDilution
         const int startColNo = 9;
         const int rowCnt = 8;
         const int colCnt = 12;
+        static public int MRDTimes { get; set; }
         static public int OrgSTDConc {get;set;}
         static public int STDParallelCnt { get; set; }
         static public int SampleParallelCnt { get; set; }
@@ -42,8 +43,8 @@ namespace APDilution
             
             if(normalDilutions.Exists(x=>x.dilutionTimes <=0))
                  throw new Exception("稀释倍数必须大于0!");
-            if(dilutionInfos.Exists(x=>x.type == SampleType.MatrixBlank && x.dilutionTimes != 0))
-                throw new Exception("MatrixBlank 稀释倍数必须为!");
+            //if(dilutionInfos.Exists(x=>x.type == SampleType.MatrixBlank && x.dilutionTimes != 0))
+            //    throw new Exception("MatrixBlank 稀释倍数必须为0!");
             if(dilutionInfos.Exists(x=>x.dilutionTimes > 6250000))
                 throw new Exception("稀释倍数必须不大于6.25M!");
 
@@ -74,6 +75,8 @@ namespace APDilution
             Range rngStartConc = ws.Cells.get_Range("H1");
             Range rngSTDParallel = ws.Cells.get_Range("H2");
             Range rngSampleParallel = ws.Cells.get_Range("H3");
+            Range rngMRDTimes = ws.Cells.get_Range("H4");
+
             if (rngSTDParallel.Value2 == null)
                 throw new Exception("STD复孔数未设置！");
 
@@ -82,13 +85,17 @@ namespace APDilution
 
             if(rngStartConc.Value2 == null)
                 throw new Exception("STD起始浓度未设置！");
-            
+
+
+            if (rngMRDTimes.Value2 == null)
+                throw new Exception("MRD倍数未设置！");
 
             int stdParallelCnt = int.Parse(rngSTDParallel.Value2.ToString());
             int sampleParallelCnt = int.Parse(rngSampleParallel.Value2.ToString());
             OrgSTDConc = int.Parse(rngStartConc.Value2.ToString());
             STDParallelCnt = stdParallelCnt;
             SampleParallelCnt = sampleParallelCnt;
+            MRDTimes = int.Parse(rngMRDTimes.Value2.ToString());
             if (STDParallelCnt < 2 || STDParallelCnt > 12)
                 throw new Exception("STD复孔数必须介于2~12之间！");
             if(SampleParallelCnt < 2 || STDParallelCnt > 12)
@@ -119,15 +126,14 @@ namespace APDilution
                 int sampleID = int.Parse(arryItem[i, 2].ToString());
                 int dilutionTimes = int.Parse(arryItem[i, 3].ToString());
                 string sVolume = ((int)Configurations.Instance.DilutionVolume).ToString();
-                int mrdDilutionTimes = 1;
+                
                 if(!Configurations.Instance.IsGradualPipetting)
                 {
                     sVolume = arryItem[i, 4].ToString();
-                    mrdDilutionTimes = int.Parse(arryItem[i, 5].ToString());
                 }
                 uint volume = uint.Parse(sVolume);
                 rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),volume,
-                    dilutionTimes,mrdDilutionTimes, sampleID, 0, 1, animalNo));
+                    dilutionTimes, sampleID, 0, 1, animalNo));
             }
             CheckDuplicated(rawDilutionInfos);
             List<DilutionInfo> normalSamples = new List<DilutionInfo>();
@@ -187,7 +193,6 @@ namespace APDilution
                             dilutionInfos.Add(new DilutionInfo(normalSample.type,
                                 normalSample.orgVolume,
                                 normalSample.dilutionTimes, 
-                                normalSample.mrdDilutionTimes,
                                 normalSample.seqIDinThisType, 
                                 wellID, 
                                 i + 1));
@@ -247,7 +252,7 @@ namespace APDilution
             List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
             parallelCnt = stdParallelCnt;
             int dilutionTimes = rawDilutionInfo.dilutionTimes;
-            int mrdDilutionTimes = rawDilutionInfo.mrdDilutionTimes;
+            int mrdDilutionTimes = ExcelReader.MRDTimes;
 
             if (mrdDilutionTimes != 1 && dilutionTimes % mrdDilutionTimes != 0)
             {
@@ -273,7 +278,7 @@ namespace APDilution
                     throw new Exception(string.Format("样品：{0}需要孔位：{1}",animalNo,wellID));
                 remainingWellIDs.Remove(wellID);
                 DilutionInfo dilutionInfo = new DilutionInfo(sampleType,orgVolume,
-                    dilutionTimes, mrdDilutionTimes,
+                    dilutionTimes, 
                     seqNo, wellID, 1, animalNo);
                 dilutionInfos.Add(dilutionInfo);
             }
@@ -366,17 +371,16 @@ namespace APDilution
     {
         public SampleType type;
         public int dilutionTimes;
-        public int mrdDilutionTimes;
+        
         public int seqIDinThisType;
         public int destWellID;
         public string analysisNo;
         public int gradualStep;
         public uint orgVolume;
-        public DilutionInfo(SampleType type,uint orgVolume, int dilutionTimes, int mrdTimes, int seqNo,
+        public DilutionInfo(SampleType type,uint orgVolume, int dilutionTimes, int seqNo,
             int destWellID, int gradualStep = 1,string analysisNo = "")
         {
             this.type = type;
-            this.mrdDilutionTimes = mrdTimes;
             this.dilutionTimes = dilutionTimes;
             this.destWellID = destWellID;
             seqIDinThisType = seqNo;

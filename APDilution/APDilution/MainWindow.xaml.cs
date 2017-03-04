@@ -1,6 +1,8 @@
 ﻿using APDilution.Properties;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -36,16 +38,47 @@ namespace APDilution
 
         void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            this.Title = string.Format("Dilution {0}",strings.version);
+            string fileName = "";
+            try
+            {
+                fileName = ParseCmdLine();
+            }
+            catch(Exception ex)
+            {
+                string errMsg = "在解析命令行发生错误: " + ex.Message;
+                SetErrorInfo(errMsg);
+                Configurations.Instance.WriteResult(false, errMsg);
+                return;
+            }
+            if(fileName != "")
+                GenerateWorklist(fileName);
+        }
+
+        private string ParseCmdLine()
+        {
+            this.Title = string.Format("Dilution {0}", strings.version);
+
+            String[] args = System.Environment.GetCommandLineArgs();
+            if (args.Count() == 1)
+                throw new Exception("未指定excel文件！");
+            if (args.Count() == 3 && args[2] != "G")
+            {
+                throw new Exception("命令行第二个参数必须为'G'！");
+            }
+            return args[1];
+        }
+
+        private void GenerateWorklist(string file)
+        {
 #if DEBUG
             GenerateWorklist();
 #else
             try
             {
-                GenerateWorklist();
+                GenerateWorklistImpl(file);
             }
 
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 string errMsg = "在生成worklsit时发生错误: " + ex.Message;
                 SetErrorInfo(errMsg);
@@ -55,34 +88,39 @@ namespace APDilution
 #endif
             Configurations.Instance.WriteResult(true, "");
         }
+        private void btnOPen_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Title = "选择加样文件";
+            openFileDialog.InitialDirectory = ConfigurationManager.AppSettings["WorkingFolder"];
+            openFileDialog.Filter = "excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*";
+            if ((bool)(openFileDialog.ShowDialog()))
+            {
+                FileInfo fileInfo = new FileInfo(openFileDialog.FileName);
+                GenerateWorklist(fileInfo.Name.Replace(".xlsx",""));
+            }
+        }
 
-        private void GenerateWorklist()
+        private void GenerateWorklistImpl(string fileName)
         {
             ExcelReader excelReader = new ExcelReader();
             List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
             var folder = Configurations.Instance.WorkingFolder;
             String commandLineString = System.Environment.CommandLine;
-            String[] args = System.Environment.GetCommandLineArgs();
-            if (args.Count() == 1)
-                throw new Exception("未指定excel文件！");
-            if(args.Count() == 3 && args[2] != "G")
-            {
-                throw new Exception("命令行第二个参数必须为'G'！");
-            }
-      
+
+
             string assayName = "";
             string reactionBarcode = "";
-            string fileName = args[1];
             int batchID = 0;
             GetBarcodesAndAssayName(fileName, ref assayName, ref reactionBarcode, ref batchID);
             
-            string sFile = folder + args[1] + ".xlsx";
+            string sFile = folder + fileName + ".xlsx";
             if (!File.Exists(sFile))
                 throw new Exception(string.Format("指定的excel文件：{0}不存在！", sFile));
 
             dilutionInfos = excelReader.Read(sFile, ref rawDilutionInfos);
-            SetInfo(string.Format("加载文件：{0}成功！\r\n专题号：{1}\r\n批次号:{2}\r\n反应板条码{3}", 
-                args[1], assayName, batchID,reactionBarcode));
+            SetInfo(string.Format("加载文件：{0}成功！\r\n专题号：{1}\r\n批次号:{2}\r\n反应板条码{3}",
+                fileName, assayName, batchID, reactionBarcode));
             
             plateViewer = new PlateViewer(new Size(900, 600), new Size(30, 40));
             plateViewer.SetDilutionInfos(dilutionInfos);
@@ -95,14 +133,16 @@ namespace APDilution
                 out secondPlateBuffer, 
                 out readableWklists);
             sFile = Utility.GetOutputFolder() + "dilution.gwl";
+
+            var sReactionBarcodeFile = Utility.GetOutputFolder() + "currentBarcode.txt";
+            File.WriteAllText(sReactionBarcodeFile, reactionBarcode);
             string assayFolder = Utility.GetAssayFolder(assayName);
-            string tplFile = assayFolder + string.Format("{0}.tpl", batchID);
+            string tplFile = assayFolder + string.Format("{0}.tpl", reactionBarcode);
             TPLFile.Generate(tplFile, dilutionInfos);
 
             var sReadableFile = assayFolder + string.Format("readable{0}.csv",batchID);
             File.WriteAllLines(sFile, strs);
-            File.WriteAllLines(sReadableFile, readableWklists);
-            
+            File.WriteAllLines(sReadableFile, readableWklists,Encoding.Default);
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);
         }
 
@@ -140,10 +180,7 @@ namespace APDilution
             }
             int startIndex = batchNum - 1;
             return strs[startIndex];
-
         }
-
-       
 
         private void Save2Image(FrameworkElement element,Size sz,string sFile)
         {
@@ -222,6 +259,8 @@ namespace APDilution
             index_Name.Add(2, Plate2Show.reaction2);
             plateViewer.SetCurrentPlate(index_Name[index]);
         }
+
+   
        
     }
 }
