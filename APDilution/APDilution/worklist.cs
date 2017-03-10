@@ -64,7 +64,7 @@ namespace APDilution
 
             strs.Add(GetComment("buffer"));
             //var flatBufferPipettings = Flatten(bufferPipettings);
-            strs.AddRange(Format(bufferPipettings, Configurations.Instance.BufferLiquidClass));
+            strs.AddRange(FormatBuffer(bufferPipettings, Configurations.Instance.BufferLiquidClass));
             allPipettings.AddRange(bufferPipettings);
             //strs.Add(breakPrefix);
             strs.Add(GetComment("sample"));
@@ -303,6 +303,41 @@ namespace APDilution
             return commands;
         }
 
+
+        private IEnumerable<string> FormatBuffer(List<PipettingInfo> pipettingInfos, string liquidClass)
+        {
+             List<PipettingInfo> optimizedPipetting = new List<PipettingInfo>();
+            var firstBuffer = pipettingInfos.Where(x => x.srcLabware == Configurations.Instance.Buffer1LabwareName).ToList();
+            var secondBuffer = pipettingInfos.Where(x => x.srcLabware == Configurations.Instance.Buffer2LabwareName).ToList();
+            List<List<PipettingInfo>> pipettingEachBuffer = new List<List<PipettingInfo>>()
+            {
+                firstBuffer,secondBuffer
+            };
+
+
+           
+            List<string> commands = new List<string>();
+            for (int plateIndex = 0; plateIndex < 2; plateIndex++)
+            {
+                var curPipettingInfos = pipettingEachBuffer[plateIndex];
+                for (int i = 0; i < 8; i++)
+                {
+                    int tipID = i + 1;
+                    var thisTipPipettings = curPipettingInfos.Where(x => x.srcWellID == tipID).ToList();
+
+                    foreach (var pipettingInfo in thisTipPipettings)
+                    {
+                        commands.Add(GetAspirate(pipettingInfo.srcLabware, pipettingInfo.srcWellID, pipettingInfo.vol, liquidClass));
+                        commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
+                    }
+                    commands.Add("W;");
+                }
+                commands.Add("B;");
+            }
+           
+              
+            return commands;
+        }
 
         private IEnumerable<string> Format(List<PipettingInfo> pipettingInfos,string liquidClass)
         {
@@ -687,20 +722,23 @@ namespace APDilution
         private void OptimizeSourcePipetting(ref List<PipettingInfo> pipettingInfos)
         {
             List<PipettingInfo> optimizedPipetting = new List<PipettingInfo>();
-            while (pipettingInfos.Count > 0)
+            var firstBuffer = pipettingInfos.Where(x => x.srcLabware == Configurations.Instance.Buffer1LabwareName).ToList();
+            var secondBuffer = pipettingInfos.Where(x => x.srcLabware == Configurations.Instance.Buffer2LabwareName).ToList();
+            List<List<PipettingInfo>> pipettingEachBuffer = new List<List<PipettingInfo>>()
             {
-                List<PipettingInfo> pipettings = new List<PipettingInfo>();
-                for (int i = 0; i < 8; i++)
+                firstBuffer,secondBuffer
+            };
+
+
+            for (int plateIndex = 0; plateIndex < 2; plateIndex++ )
+            {
+                for (int i = 0; i < pipettingEachBuffer[plateIndex].Count; i++)
                 {
-                    var lst = pipettingInfos.Where(x => x.srcWellID == i + 1).ToList();
-                    if (lst.Count != 0)
-                    {
-                        var first = lst.First();
-                        pipettings.Add(first);
-                        pipettingInfos.Remove(first);
-                    }
+                    var curPipetting = pipettingEachBuffer[plateIndex];
+                    var tmpInfo = new PipettingInfo(curPipetting[i]);
+                    tmpInfo.srcWellID = i % 8 + 1;
+                    optimizedPipetting.Add(tmpInfo);
                 }
-                optimizedPipetting.AddRange(pipettings);
             }
             pipettingInfos = optimizedPipetting;
         }

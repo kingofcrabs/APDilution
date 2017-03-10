@@ -98,13 +98,16 @@ namespace InputBarcodes
                 Directory.CreateDirectory(sFolder);
             string sFile = sFolder + "barcodes.txt";
             File.WriteAllLines(sFile, barcodes);
-
+            FolderHelper.AddBarcodes2ExistBarcodeFile(barcodes);
         }
 
         private void CheckBarcodes()
         {
             barcodes.Clear();
-            
+
+            var existingBarcodes = FolderHelper.GetExistBarcodes();
+
+
             for (int i = 0; i < batchCnt; i++)
             {
                 for (int indexInBatch = 0; indexInBatch < 1; indexInBatch++)
@@ -114,7 +117,10 @@ namespace InputBarcodes
                     var tmpStr = dataGridView.Rows[i].Cells[indexInBatch].Value.ToString();
                     if(tmpStr == "")
                         throw new Exception(string.Format("批次：{0}的第{1}个条码为空！",i+1,1+indexInBatch));
-                    
+                    if(existingBarcodes.Contains(tmpStr))
+                    {
+                        throw new Exception(string.Format("条码{0}在历史条码中已经存在！", tmpStr));
+                    }
                     if (barcodes.Contains(tmpStr))//already exist
                     {
                         int index = barcodes.IndexOf(tmpStr);
