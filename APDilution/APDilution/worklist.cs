@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -125,17 +126,17 @@ namespace APDilution
                 dilutionInfos.AddRange(rawDilutionInfos.Where(x => x.type == SampleType.MQC));
                 dilutionInfos.AddRange(rawDilutionInfos.Where(x => x.type == SampleType.LQC));
             }
-            if (dilutionInfos.Count == 1)
+            if (dilutionInfos.Count <= 1)
                 return empty;
             int ratio = (int)(dilutionInfos[1].dilutionTimes / dilutionInfos[0].dilutionTimes);
             if (dilutionInfos[1].dilutionTimes != (ratio * dilutionInfos[0].dilutionTimes))
-                throw new Exception(string.Format("Cannot do gradual dilution because the ratio is:", ratio));
+                throw new Exception(string.Format("不能做梯度稀释应为样品之间的稀释倍数不能整除。"));
             for (int i = 1; i < dilutionInfos.Count - 1; i++)
             {
                 double beforeTime = dilutionInfos[i].dilutionTimes;
                 double afterTime = dilutionInfos[i + 1].dilutionTimes;
                 if (afterTime / beforeTime != ratio)
-                    throw new Exception(string.Format("Gradual dilutions' ratios are not equal: {0} vs {1}", ratio, afterTime / beforeTime));
+                    throw new Exception(string.Format("梯度稀释倍数不等: {0}-{1}", ratio, afterTime / beforeTime));
             }
             //move standard to 1st well
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
@@ -363,7 +364,7 @@ namespace APDilution
                         for(int parallel = 0; parallel < 2; parallel++)
                         {
                             int dstWellID = startWellID + parallel;
-                            pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, tmpVol, 1, current.type, current.analysisNo));
+                            pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, Configurations.Instance.ReactionPlateName, dstWellID, tmpVol, 1, current.type, current.analysisNo));
                         }
                     }
                 }
@@ -371,7 +372,7 @@ namespace APDilution
                 {
                     foreach (var dstWellID in destWells)
                     {
-                        pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, "Reaction", dstWellID, vol, 1, current.type, current.analysisNo));
+                        pipettingInfos.Add(new PipettingInfo(plateName, srcWellID, Configurations.Instance.ReactionPlateName, dstWellID, vol, 1, current.type, current.analysisNo));
                     }
                     index++;
                 }
@@ -433,14 +434,13 @@ namespace APDilution
         private int GetMaxDilutionWellsNeeded(List<DilutionInfo> thisColumnPipettingInfos)
         {
             int maxWellsNeed = 1;
-
             for (int i = 0; i < thisColumnPipettingInfos.Count; i++)
             {
                 int times = thisColumnPipettingInfos[i].dilutionTimes;
                 int mrdTimes = ExcelReader.MRDTimes;
                 int remainTimes = times / mrdTimes;
                 FactorFinder factorFinder = new FactorFinder();
-                int mrdWellsNeed = factorFinder.GetBestFactors(mrdTimes).Count;
+                int mrdWellsNeed = factorFinder.GetBestFactors(mrdTimes,true).Count;
                 int remainWellsNeed = factorFinder.GetBestFactors(remainTimes).Count;
                 int totalWellsNeed = mrdWellsNeed + remainWellsNeed;
                 if (mrdTimes == 1)
@@ -448,9 +448,88 @@ namespace APDilution
                 if (totalWellsNeed > maxWellsNeed)
                     maxWellsNeed = totalWellsNeed;
             }
+
+            //if (maxWellsNeed > Configurations.Instance.DilutionWells)
+            //    throw new Exception("稀释孔数量不足以实现稀释！");
             return maxWellsNeed;
         }
 
+
+        public List<string> GenerateRCommands(string assayFile,List<int> dstWells)
+        {
+            List<string> contents = File.ReadAllLines(assayFile).ToList();
+            List<string> rCommands = new List<string>();
+            for(int i = 1; i< contents.Count; i++)
+            {
+                List<string> tmpStrs = contents[i].Split(',').ToList();
+                string srcLabware = tmpStrs[0];
+                int vol = int.Parse(tmpStrs[1]);
+                rCommands.Add(GenerateRCommand(srcLabware, Configurations.Instance.ReactionPlateName, dstWells, vol));
+            }
+            return rCommands;
+        }
+
+
+        private string GenerateRCommand(string srcLabel,string destLabel,List<int> dstWells, int vol)
+        {
+            //R;AspirateParameters;DispenseParameters;Volume;LiquidClass;NoOfDitiRe
+            //uses;NoOfMultiDisp;Direction[;ExcludeDestWell]*
+            //AspirateParameters =
+            //SrcRackLabel; SrcRackID; SrcRackType; SrcPosStart; SrcPosEnd;
+            //and
+            //DispenseParameters =
+            //DestRackLabel; DestRackID; DestRackType; DestPosStart; DestPosEnd;
+            
+            string aspParameters = string.Format("{0};;;{1};{2};", srcLabel, 1, 8);
+            int maxWell = dstWells.Max();
+            int minWell = dstWells.Min();
+            string exclude = "";
+            for(int wellID = minWell; wellID < maxWell; wellID++)
+            {
+                if(!dstWells.Contains(wellID))
+                {
+                    exclude += ";";
+                    exclude += wellID;
+                }
+            }
+            string dspParameters = string.Format("{0};;;{1};{2};", destLabel, minWell, maxWell);
+            //R;AspirateParameters;DispenseParameters;Volume;LiquidClass;NoOfDitiRe
+            //uses;NoOfMultiDisp;Direction[;ExcludeDestWell]*
+            int noOfMultiDisp = 0;
+            if(vol <= 50)
+            {
+                noOfMultiDisp = 12;
+            }
+            else if(vol <= 110)
+            {
+                noOfMultiDisp = 6;
+            }
+            else if(vol <= 200)
+            {
+                noOfMultiDisp = 4;
+            }
+            else if( vol <= 300)
+            {
+                noOfMultiDisp = 3;
+            }
+            else
+            {
+                noOfMultiDisp = 2;
+            }
+
+
+            string rCommand =  string.Format("R;{0};{1};{2};{3};{4};{5};{6}{7}",
+                aspParameters,
+                dspParameters,
+                vol,
+                Configurations.Instance.ReagentLiquidClass,
+                1,
+                noOfMultiDisp,
+                0,
+                exclude);
+
+            return rCommand;
+        }
         private List<PipettingInfo> GenerateSamplePipettingInfos(List<DilutionInfo> thisColumnDilutionInfos, string destPlateLabel, int columnIndex)
         {
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
@@ -501,10 +580,13 @@ namespace APDilution
             for (int i = 0; i < sampleVolumes.Count; i++)
             {
                 double vol = sampleVolumes[i];
+                int dstWellID = GetWellID(columnIndex + 1, indexInColumn);
+                if(dstWellID > 96)
+                    throw new Exception(string.Format("样品：{0}需要用到第{1}个孔", dilutionInfo.analysisNo,dstWellID));
                 pipettingInfo = new PipettingInfo(destPlateLabel, 
                                                 GetWellID(columnIndex, indexInColumn),
-                                                destPlateLabel, 
-                                                GetWellID(columnIndex+1, indexInColumn),
+                                                destPlateLabel,
+                                                dstWellID,
                                                 vol,
                                                 eachStepTimes[i],
                                                 dilutionInfo.type,dilutionInfo.analysisNo);
@@ -832,8 +914,9 @@ namespace APDilution
                 string srcLabware = i >= mrdSteps ? Configurations.Instance.Buffer2LabwareName : Configurations.Instance.Buffer1LabwareName;
                 var vol = dilutionVolumes[i];
                 double thisWellTimes = eachStepTimes[i];
+                int dstWellID = GetWellID(columnIndex++, indexInColumn);
                 PipettingInfo pipettingInfo = new PipettingInfo(srcLabware, indexInColumn + 1,
-                    destPlateLabel, GetWellID(columnIndex++, indexInColumn), vol,
+                    destPlateLabel, dstWellID, vol,
                     thisWellTimes, dilutionInfo.type,dilutionInfo.analysisNo);
                 pipettingInfos.Add(pipettingInfo);
             }
@@ -876,7 +959,7 @@ namespace APDilution
             if(mrdTimes != 1)
             {
                 times = times / mrdTimes;
-                eachStepTimes = factorFinder.GetBestFactors(mrdTimes);
+                eachStepTimes = factorFinder.GetBestFactors(mrdTimes,true);
                 mrdSteps = eachStepTimes.Count;
             }
             bool processedInMRD = times == 1 && mrdTimes != 1; //has been processed in mrd

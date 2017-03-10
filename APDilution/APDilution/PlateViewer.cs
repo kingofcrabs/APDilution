@@ -21,7 +21,7 @@ namespace APDilution
         List<int> notUsedWellIDs = new List<int>();
         public delegate void selectedWellChangedHandler(string sNewWell);
         public event selectedWellChangedHandler OnSelectedWellChanged;
-        Plate2Show plate2Show = Plate2Show.dilution;
+        Plate2Show plate2Show = Plate2Show.reaction;
 
         List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
         List<PipettingInfo> firstPlateBuffer = new List<PipettingInfo>();
@@ -163,13 +163,13 @@ namespace APDilution
       
             switch(plate2Show)
             {
-                case Plate2Show.dilution:
-                    DrawDilutionInfo(wellID,xStart,yStart,drawingContext);
-                    break;
-                case Plate2Show.reaction1:
-                case Plate2Show.reaction2:
-                    
+                case Plate2Show.reaction:
                     DrawReaction(wellID,xStart,yStart,drawingContext);
+                    break;
+                case Plate2Show.dilution1:
+                case Plate2Show.dilution2:
+                    
+                    DrawDilution(wellID,xStart,yStart,drawingContext);
                     break;
                 default:
                     throw new Exception("Invalid plate, only dilution, reaction plate are supported!");
@@ -190,12 +190,12 @@ namespace APDilution
 
         }
 
-        private void DrawReaction(int wellID, int xStart, int yStart, DrawingContext drawingContext)
+        private void DrawDilution(int wellID, int xStart, int yStart, DrawingContext drawingContext)
         {
             double width = GetWellWidth();
             double height = GetWellHeight();
             PipettingInfo pipettingInfo = null;
-            var plateBuffer = plate2Show == Plate2Show.reaction1 ? firstPlateBuffer : secondPlateBuffer;
+            var plateBuffer = plate2Show == Plate2Show.dilution1 ? firstPlateBuffer : secondPlateBuffer;
             if (plateBuffer == null || !plateBuffer.Exists(x => x.dstWellID == wellID))
                 return;
             DrawColor(wellID, xStart, yStart, drawingContext);
@@ -221,7 +221,7 @@ namespace APDilution
                     new Rect(new Point(xStart + 1, yStart + 1), new Size(GetWellWidth() - 1, height - 1)));
         }
 
-        private void DrawDilutionInfo(int wellID, int xStart, int yStart, DrawingContext drawingContext)
+        private void DrawReaction(int wellID, int xStart, int yStart, DrawingContext drawingContext)
         {
             if (!dilutionInfos.Exists(x => x.destWellID == wellID))
                 return;
@@ -297,12 +297,12 @@ namespace APDilution
             SampleType type = SampleType.Empty;
             switch(plate2Show)
             {
-                case Plate2Show.dilution:
+                case Plate2Show.reaction:
                     type = dilutionInfos.Where(x => x.destWellID == wellID).First().type;
                     break;
-                case Plate2Show.reaction1:
-                case Plate2Show.reaction2:
-                    var plateBuffer = plate2Show == Plate2Show.reaction1 ? firstPlateBuffer : secondPlateBuffer;
+                case Plate2Show.dilution1:
+                case Plate2Show.dilution2:
+                    var plateBuffer = plate2Show == Plate2Show.dilution1 ? firstPlateBuffer : secondPlateBuffer;
                     if(plateBuffer.Exists(x => x.dstWellID == wellID))
                         type = plateBuffer.Where(x => x.dstWellID == wellID).First().type;
                     break;
@@ -443,8 +443,8 @@ namespace APDilution
 
     internal enum Plate2Show
     {
-        dilution,
-        reaction1,
-        reaction2
+        reaction,
+        dilution1,
+        dilution2
     }
 }

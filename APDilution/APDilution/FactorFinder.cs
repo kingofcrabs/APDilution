@@ -43,7 +43,7 @@ namespace APDilution
                50,40,25,20,16,10,8,5,4,2
             };
         
-        public List<int> GetBestFactors(int dilutionTimes)
+        public List<int> GetBestFactors(int dilutionTimes,bool isMRD = false)
         {
             if (dilutionTimes == 1)
                 return new List<int>() { 1 };
@@ -78,6 +78,12 @@ namespace APDilution
                 throw new Exception("Cannot find factors for dilution times: " + dilutionTimes.ToString());
             int minSum = finalFactors.Min(x => x.factors.Sum());
             var best = finalFactors.Where(x => x.factors.Sum() == minSum).First();
+            if(isMRD)
+            {
+                int maxSum = finalFactors.Max(x => x.factors.Sum());
+                best = finalFactors.Where(x => x.factors.Sum() == maxSum).First();
+            }
+               
             return best.factors.OrderByDescending(x=>x).ToList();
         }
 
@@ -86,7 +92,7 @@ namespace APDilution
             int gradualTimes = Configurations.Instance.GradualTimes;
             int needWellCnt = (int)Math.Log(dilutionTimes, gradualTimes);
             if (Math.Pow(gradualTimes, needWellCnt) != dilutionTimes)
-                throw new Exception(string.Format("Invalid dilution times:{0}", dilutionTimes));
+                throw new Exception(string.Format("稀释倍数:{0}非法！", dilutionTimes));
             List<int> factors = new List<int>();
             for (int i = 0; i < needWellCnt; i++)
                 factors.Add(gradualTimes);

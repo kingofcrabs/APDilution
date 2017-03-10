@@ -76,6 +76,7 @@ namespace APDilution
             Range rngSTDParallel = ws.Cells.get_Range("H2");
             Range rngSampleParallel = ws.Cells.get_Range("H3");
             Range rngMRDTimes = ws.Cells.get_Range("H4");
+            Range rngAssayName = ws.Cells.get_Range("H5");
 
             if (rngSTDParallel.Value2 == null)
                 throw new Exception("STD复孔数未设置！");
@@ -90,12 +91,23 @@ namespace APDilution
             if (rngMRDTimes.Value2 == null)
                 throw new Exception("MRD倍数未设置！");
 
+            if (rngAssayName.Value2 == null)
+                throw new Exception("方法名未设置！");
+
+
             int stdParallelCnt = int.Parse(rngSTDParallel.Value2.ToString());
             int sampleParallelCnt = int.Parse(rngSampleParallel.Value2.ToString());
             OrgSTDConc = int.Parse(rngStartConc.Value2.ToString());
             STDParallelCnt = stdParallelCnt;
             SampleParallelCnt = sampleParallelCnt;
             MRDTimes = int.Parse(rngMRDTimes.Value2.ToString());
+            string assayName = rngAssayName.Value2.ToString();
+            if (Configurations.Instance.AssayName != assayName)
+                throw new Exception(string.Format("设置方法名为：{0}，文件中方法名为:{1}，不一致！",
+                    Configurations.Instance.AssayName,
+                    assayName));
+
+
             if (STDParallelCnt < 2 || STDParallelCnt > 12)
                 throw new Exception("STD复孔数必须介于2~12之间！");
             if(SampleParallelCnt < 2 || STDParallelCnt > 12)
@@ -254,7 +266,7 @@ namespace APDilution
             int dilutionTimes = rawDilutionInfo.dilutionTimes;
             int mrdDilutionTimes = ExcelReader.MRDTimes;
 
-            if (mrdDilutionTimes != 1 && dilutionTimes % mrdDilutionTimes != 0)
+            if (mrdDilutionTimes != 1 && dilutionTimes % mrdDilutionTimes != 0 && !Configurations.Instance.IsGradualPipetting)
             {
                 throw new Exception(string.Format("分析号{0}的稀释倍数{1}不能整除mrd倍数{2}",
                     rawDilutionInfo.analysisNo, dilutionTimes, mrdDilutionTimes));

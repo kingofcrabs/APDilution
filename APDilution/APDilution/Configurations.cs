@@ -28,12 +28,12 @@ namespace APDilution
         public static void BackupFolder(string sourceDirectory, string destDirectory)
         {
             //获取所有文件名称
-            string[] fileName = Directory.GetFiles(sourceDirectory);
-
-            foreach (string filePath in fileName)
+            string[] fileNames = Directory.GetFiles(sourceDirectory);
+            
+            foreach (string filePath in fileNames)
             {
                 //根据每个文件名称生成对应的目标文件名称
-                string filePathTemp = destDirectory + "\\" + filePath.Substring(sourceDirectory.Length + 1);
+                string filePathTemp = destDirectory + "\\" + filePath.Substring(sourceDirectory.Length);
 
                 //若不存在，直接复制文件；若存在，覆盖复制
                 if (File.Exists(filePathTemp))
@@ -45,18 +45,27 @@ namespace APDilution
                     File.Copy(filePath, filePathTemp);
                 }
             }
+
+            //string[] dirs = Directory.GetDirectories(sourceDirectory);
+            //foreach(var dir in dirs)
+            //{
+            //    FileInfo fileInfo = new FileInfo(dir);
+            //    //fileInfo.Name
+
+            //}
         }    
 
         public static string GetHistoryFolder()
         {
-            string sOutputFolder = GetExeParentFolder() + "History\\";
+            string sOutputFolder = GetExeParentFolder() + "history\\";
             if (!Directory.Exists(sOutputFolder))
             {
                 Directory.CreateDirectory(sOutputFolder);
             }
             return sOutputFolder;
         }
-
+        
+        
         public static string GetOutputFolder()
         {
             string sOutputFolder = GetExeParentFolder() + "Output\\";
@@ -73,14 +82,22 @@ namespace APDilution
             return wellsNeeded;
         }
 
-        internal static string GetAssayFolder(string assayName)
+        internal static string GetAssaysFolder()
         {
-            string assayFolder = GetOutputFolder() + assayName + "\\";
+            string assayFolder = GetExeParentFolder() + "assays\\";
             if (!Directory.Exists(assayFolder))
             {
                 Directory.CreateDirectory(assayFolder);
             }
             return assayFolder;
+        }
+
+        internal static string GetSubOutputFolder()
+        {
+            string dir = GetOutputFolder() + Configurations.Instance.ReactionBarcode + "\\";
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+            return dir;
         }
     }
     class Configurations
@@ -127,6 +144,7 @@ namespace APDilution
             DilutionWells = int.Parse(ConfigurationManager.AppSettings["DilutionWells"]);
             TipVolume = int.Parse(ConfigurationManager.AppSettings["TipVolume"]);
             StandardGradual = bool.Parse(ConfigurationManager.AppSettings["StandardGradual"]);
+            ReagentLiquidClass = ConfigurationManager.AppSettings["ReagentLiquidClass"];
         }
 
         public void WriteResult(bool bSuccess, string errMsg)
@@ -176,5 +194,10 @@ namespace APDilution
         public string GradualPlateName { get; set; }
 
         public bool StandardGradual { get; set; }
+
+        public string ReactionBarcode { get; set; }
+
+        public string ReagentLiquidClass { get; set; }
+        public string AssayName { get; set; }
     }
 }
