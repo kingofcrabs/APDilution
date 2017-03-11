@@ -40,7 +40,7 @@ namespace APDilution
     {
         List<int> possibleFactors = new List<int>()
             {
-               50,40,25,20,16,10,8,5,4,2
+               40,25,20,16,10,8,5,4,2
             };
         
         public List<int> GetBestFactors(int dilutionTimes,bool isMRD = false)
@@ -78,11 +78,11 @@ namespace APDilution
                 throw new Exception("Cannot find factors for dilution times: " + dilutionTimes.ToString());
             int minSum = finalFactors.Min(x => x.factors.Sum());
             var best = finalFactors.Where(x => x.factors.Sum() == minSum).First();
-            if(isMRD)
-            {
-                int maxSum = finalFactors.Max(x => x.factors.Sum());
-                best = finalFactors.Where(x => x.factors.Sum() == maxSum).First();
-            }
+            //if(isMRD)
+            //{
+            //    int maxSum = finalFactors.Max(x => x.factors.Sum());
+            //    best = finalFactors.Where(x => x.factors.Sum() == maxSum).First();
+            //}
                
             return best.factors.OrderByDescending(x=>x).ToList();
         }
@@ -118,7 +118,7 @@ namespace APDilution
                     FactorInfo childInfo = new FactorInfo(factorInfo);
                     childInfo.factors.Add(possibleFactor);
                     childInfo.currentVal /= possibleFactor;
-                    if (childInfo.currentVal <= 50 &&   //can find factor directly
+                    if (childInfo.currentVal <= 40 &&   //can find factor directly
                         (childInfo.currentVal == 1 || possibleFactors.Contains(childInfo.currentVal)))
                     {
                         if(childInfo.currentVal == 1)

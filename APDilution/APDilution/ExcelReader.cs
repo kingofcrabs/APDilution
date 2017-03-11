@@ -144,6 +144,8 @@ namespace APDilution
                     sVolume = arryItem[i, 4].ToString();
                 }
                 uint volume = uint.Parse(sVolume);
+                if (volume < 20)
+                    throw new Exception(string.Format("动物号为：{0}的样本，体积太少！", animalNo));
                 rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),volume,
                     dilutionTimes, sampleID, 0, 1, animalNo));
             }
