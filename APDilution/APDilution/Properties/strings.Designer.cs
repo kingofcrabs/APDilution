@@ -61,7 +61,7 @@ namespace APDilution.Properties {
         }
         
         /// <summary>
-        ///   查找类似 0.18 的本地化字符串。
+        ///   查找类似 0.20 的本地化字符串。
         /// </summary>
         internal static string version {
             get {

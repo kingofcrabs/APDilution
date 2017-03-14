@@ -18,13 +18,17 @@ namespace APDilution
 
         const string breakPrefix = "B;";
         GradualDilutionInfo gradualDilutionInfo = new GradualDilutionInfo();
+        List<PipettingInfo> firstSample2Dilution = new List<PipettingInfo>();
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
-        public List<string> DoJob(string assayName, string reactionBarcode,
+        public void DoJob(string assayName, string reactionBarcode,
             List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
-            out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat, 
-            out List<string> readableCommands)
+            out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat)
         {
-            
+
+            string subOutputFolder = Utility.GetSubOutputFolder();
+            var header = "AnalysisNo,Src Labware,Src WellID,Volume,Dst Labware,Dst WellID";
+
+
             firstPlateBufferFlat = null;
             secondPlateBufferFlat = null;
             this.rawDilutionInfos = rawDilutionInfos;
@@ -36,6 +40,8 @@ namespace APDilution
             {
                 strs.Add(GetComment("standard gradual"));
                 List<string> gradualPipettingStrs = ProcessGradualDilution4StandardAndQC(this.rawDilutionInfos, allPipettings);
+                var gradualReadableStrs = FormatReadable(allPipettings);
+                File.WriteAllLines(subOutputFolder + "gradualSTDQC.csv", strs);
                 strs.AddRange(gradualPipettingStrs);
             }
             
@@ -56,35 +62,77 @@ namespace APDilution
             firstPlateBufferFlat = firstBufferFlat;
             secondPlateBufferFlat = secondBufferFlat;
             //Save2Excel(firstBufferFlat, secondBufferFlat);
-            readableCommands = new List<string>();
-            readableCommands.Add("AnalysisNo,Src Labware,Src WellID,Volume,Dst Labware,Dst WellID");
-            //from dilution to reaction plate
-            List<PipettingInfo> transferPipettings = GenerateTransferPipettingInfos();
+            List<string> readableCommands = new List<string>();
+            
+            readableCommands.Add(header);
           
-
             strs.Add(GetComment("buffer"));
             //var flatBufferPipettings = Flatten(bufferPipettings);
+            string bufferFile = subOutputFolder + "buffer.gwl";
             strs.AddRange(FormatBuffer(bufferPipettings, Configurations.Instance.BufferLiquidClass));
+            File.WriteAllLines(bufferFile, strs);
+
             allPipettings.AddRange(bufferPipettings);
-            //strs.Add(breakPrefix);
+            
             strs.Add(GetComment("sample"));
             allPipettings.AddRange(samplePipettings);
+          
             //after each column's pipetting, shake 
             //get first plate
+            List<string> firstColumnStrs = new List<string>();
             var firstPlateSamplePipettings = samplePipettings.Where(x => x.dstLabware == firstDilutionPlateName).ToList();
+            //extract first column pipettings
+            var firstColumnPipettings = firstPlateSamplePipettings.Where(x => x.dstWellID <= 8).ToList();
+            firstPlateSamplePipettings = firstPlateSamplePipettings.Except(firstColumnPipettings).ToList();
+            firstColumnStrs.AddRange(GetStringForEachColumn(firstColumnPipettings, Configurations.Instance.SampleLiquidClass));
             strs.AddRange(GetStringForEachColumn(firstPlateSamplePipettings, Configurations.Instance.SampleLiquidClass));
             
             var secondPlateSamplePipettings = samplePipettings.Except(firstPlateSamplePipettings).ToList();
+            //extract first column pipettings
+            firstColumnPipettings = secondPlateSamplePipettings.Where(x => x.dstWellID <= 8).ToList();
+            firstColumnStrs.AddRange(GetStringForEachColumn(firstColumnPipettings, Configurations.Instance.SampleLiquidClass));
+            secondPlateSamplePipettings = secondPlateSamplePipettings.Except(firstColumnPipettings).ToList();
             strs.AddRange(GetStringForEachColumn(secondPlateSamplePipettings, Configurations.Instance.SampleLiquidClass));
-            
-            //strs.Add(breakPrefix);
+            string firstColumnFile = subOutputFolder + "firstColumn.gwl";
+            File.WriteAllLines(firstColumnFile, firstColumnStrs);
+
+            //from dilution to reaction plate
+            List<PipettingInfo> transferPipettings = GenerateTransferPipettingInfos();
             strs.Add(GetComment("transfer"));
             allPipettings.AddRange(transferPipettings);
-            strs.AddRange(Format(transferPipettings, Configurations.Instance.TransferLiquidClass));
+            strs.AddRange(FormatTransfer(transferPipettings, Configurations.Instance.TransferLiquidClass));
             allPipettings = allPipettings.OrderBy(x => x.analysisNo).ToList();
             readableCommands.AddRange(FormatReadable(allPipettings));
-            return strs;
+
+
+            
+            string dilutionFile = subOutputFolder + "dilution.gwl";
+            var sReactionBarcodeFile = Utility.GetOutputFolder() + "currentBarcode.txt";
+            File.WriteAllText(sReactionBarcodeFile, reactionBarcode);
+            string tplFile = subOutputFolder + "current.tpl";
+            TPLFile.Generate(tplFile, dilutionInfos);
+            var sReadableFile = subOutputFolder + "readable.csv";
+            File.WriteAllLines(dilutionFile, strs);
+
+            var rCommands = GenerateRCommands(Helper.GetConfigFolder() + assayName + ".csv", dilutionInfos.Select(x => x.destWellID).ToList());
+            for (int i = 0; i < rCommands.Count; i++)
+            {
+                File.WriteAllText(subOutputFolder + string.Format("r{0}.gwl", i + 1), rCommands[i]);
+            }
+
+            File.WriteAllLines(sReadableFile, readableCommands, Encoding.Default);
+            Copy2AssayFolder(tplFile, sReadableFile, reactionBarcode);
         }
+
+    
+
+        private void Copy2AssayFolder(string tplFile, string sReadableFile, string reactionBarcode)
+        {
+            string dstFolder = Utility.GetAssaysFolder();
+            File.Copy(sReadableFile, dstFolder + string.Format("{0}.csv", reactionBarcode), true);
+            File.Copy(tplFile, dstFolder + string.Format("{0}.tpl", reactionBarcode), true);
+        }
+
 
         private List<string> ProcessGradualDilution4StandardAndQC(
             List<DilutionInfo> rawDilutionInfos,
@@ -313,31 +361,47 @@ namespace APDilution
             {
                 firstBuffer,secondBuffer
             };
-
-
-           
             List<string> commands = new List<string>();
             for (int plateIndex = 0; plateIndex < 2; plateIndex++)
             {
                 var curPipettingInfos = pipettingEachBuffer[plateIndex];
-                for (int i = 0; i < 8; i++)
+                for (int row = 0; row < 8; row++ )
                 {
-                    int tipID = i + 1;
-                    var thisTipPipettings = curPipettingInfos.Where(x => x.srcWellID == tipID).ToList();
-
-                    foreach (var pipettingInfo in thisTipPipettings)
+                    var thisColumnPipettings = curPipettingInfos.Where(x => IsSameRow(x,row)).ToList();
+                    foreach (var pipettingInfo in thisColumnPipettings)
                     {
-                        commands.Add(GetAspirate(pipettingInfo.srcLabware, pipettingInfo.srcWellID, pipettingInfo.vol, liquidClass));
+                        commands.Add(GetAspirate(pipettingInfo.srcLabware, row+1, pipettingInfo.vol, liquidClass));
                         commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
                     }
                     commands.Add("W;");
                 }
-                commands.Add("B;");
             }
-           
-              
             return commands;
         }
+
+        private bool IsSameRow(PipettingInfo x, int rowIndex)
+        {
+            int firstWellID = rowIndex + 1;
+            return (x.dstWellID - firstWellID) % 8 == 0;
+        }
+
+        private IEnumerable<string> FormatTransfer(List<PipettingInfo> transferPipettings, string liquidClass)
+        {
+            List<string> commands = new List<string>();
+            while(transferPipettings.Count > 0)
+            {
+                var first = transferPipettings.First();
+                var sameSrcPipettings = transferPipettings.Where(x => x.srcLabware == first.srcLabware && x.srcWellID == first.srcWellID).ToList();
+                foreach (var pipettingInfo in sameSrcPipettings)
+                {
+                    commands.Add(GetAspirate(pipettingInfo.srcLabware, pipettingInfo.srcWellID, pipettingInfo.vol, liquidClass));
+                    commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
+                    commands.Add("W;");
+                }
+            }
+            return commands;
+        }
+
 
         private IEnumerable<string> Format(List<PipettingInfo> pipettingInfos,string liquidClass)
         {
@@ -679,7 +743,7 @@ namespace APDilution
             pipettingInfos.AddRange(flatFirstPlate);
             pipettingInfos.AddRange(flatSecondPlate);
             pipettingInfos = SplitByVolume(pipettingInfos);
-            OptimizeSourcePipetting(ref pipettingInfos);
+            //OptimizeSourcePipetting(ref pipettingInfos);
             
             return pipettingInfos;
         }
@@ -744,15 +808,6 @@ namespace APDilution
         }
 
 
-        //private List<DilutionInfo> GetDilutionInfo(IEnumerable<KeyValuePair<DilutionInfo, List<int>>> pairs)
-        //{
-        //    List<DilutionInfo> dilutionInfos = new List<DilutionInfo>();
-        //    foreach(var pair in pairs)
-        //    {
-        //        dilutionInfos.Add(pair.Key);
-        //    }
-        //    return dilutionInfos;
-        //}
 
         private int GetMaxSampleCntFirstDilutionPlate()
         {
@@ -761,20 +816,7 @@ namespace APDilution
             else return 8*(12/Configurations.Instance.DilutionWells);
         }
 
-        //private List<DilutionInfo> GetOddColumnDilutions(List<DilutionInfo> dilutionInfos, int parallelHoleCount)
-        //{
-        //    List<DilutionInfo> oddDilutionInfos = new List<DilutionInfo>();
-        //    for(int i =0; i< dilutionInfos.Count; i++)
-        //    {
-        //        int columnID = (i + 8) / 8;
-        //        if (columnID % parallelHoleCount == 1)
-        //        {
-        //            oddDilutionInfos.Add(dilutionInfos[i]);
-        //        }
-        //    }
-        //    return oddDilutionInfos;
-        //}
-
+     
         private List<int> GetLastPositions(List<List<PipettingInfo>> pipettingInfos)
         {
             List<int> vals = new List<int>();

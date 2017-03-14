@@ -158,41 +158,18 @@ namespace APDilution
             plateViewer.SetDilutionInfos(dilutionInfos);
             canvas.Children.Add(plateViewer);
             worklist wklist = new worklist();
-            List<string> readableWklists;
-            var strs = wklist.DoJob(assayName, reactionBarcode,
+            wklist.DoJob(assayName, reactionBarcode,
                 dilutionInfos, rawDilutionInfos, 
                 out firstPlateBuffer, 
-                out secondPlateBuffer, 
-                out readableWklists);
+                out secondPlateBuffer);
 
-            string subOutputFolder = Utility.GetSubOutputFolder();
-            string dilutionFile = subOutputFolder + "dilution.gwl";
-            var sReactionBarcodeFile = Utility.GetOutputFolder() + "currentBarcode.txt";
-            File.WriteAllText(sReactionBarcodeFile, reactionBarcode);
-            string tplFile = subOutputFolder + "current.tpl";
-            TPLFile.Generate(tplFile, dilutionInfos);
-            var sReadableFile = subOutputFolder + "readable.csv";
-            File.WriteAllLines(dilutionFile, strs);
-
-            var rCommands = wklist.GenerateRCommands(Helper.GetConfigFolder() + assayName + ".csv", dilutionInfos.Select(x => x.destWellID).ToList());
-            for(int i = 0; i< rCommands.Count; i++)
-            {
-                File.WriteAllText(subOutputFolder + string.Format("r{0}.gwl", i + 1), rCommands[i]);
-            }
-
-            File.WriteAllLines(sReadableFile, readableWklists,Encoding.Default);
-            Copy2AssayFolder(tplFile, sReadableFile, reactionBarcode);
+         
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);
 
 
         }
 
-        private void Copy2AssayFolder(string tplFile, string sReadableFile,string reactionBarcode)
-        {
-            string dstFolder = Utility.GetAssaysFolder();
-            File.Copy(sReadableFile, dstFolder + string.Format("{0}.csv", reactionBarcode),true);
-            File.Copy(tplFile, dstFolder + string.Format("{0}.tpl", reactionBarcode),true);
-        }
+       
 
        
 
@@ -234,11 +211,11 @@ namespace APDilution
             {
                 Size sz = new Size(canvas.ActualWidth, canvas.ActualHeight);
                 plateViewer.SetCurrentPlate(Plate2Show.reaction);
-                Save2Image(plateViewer, sz, Utility.GetSubOutputFolder() + "dilution.png");
+                Save2Image(plateViewer, sz, Utility.GetSubOutputFolder() + "reaction.png");
                 plateViewer.SetCurrentPlate(Plate2Show.dilution1);
-                Save2Image(plateViewer, sz, Utility.GetSubOutputFolder() + "reaction1.png");
+                Save2Image(plateViewer, sz, Utility.GetSubOutputFolder() + "dilution1.png");
                 plateViewer.SetCurrentPlate(Plate2Show.dilution2);
-                Save2Image(plateViewer, sz, Utility.GetSubOutputFolder() + "reaction2.png");
+                Save2Image(plateViewer, sz, Utility.GetSubOutputFolder() + "dilution2.png");
                 Helper.AddBarcodes2ExistBarcodeFile(txtBarcode.Text);
             }
             catch(Exception ex)
