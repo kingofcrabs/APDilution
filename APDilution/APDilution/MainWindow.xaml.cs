@@ -26,7 +26,7 @@ namespace APDilution
         PlateViewer plateViewer;
         List<DilutionInfo> dilutionInfos;
         List<PipettingInfo> firstPlateBuffer, secondPlateBuffer;
-        
+        int transferVolume = 0;
         public MainWindow()
         {
             InitializeComponent();
@@ -43,10 +43,9 @@ namespace APDilution
             string assaName = "";
             try
             {
-                ParseCmdLine(ref assaName);
+                ParseCmdLine(ref assaName, ref transferVolume);
                 CheckAssayName(assaName);
                 Configurations.Instance.AssayName = assaName;
-                
             }
             catch (Exception ex)
             {
@@ -67,21 +66,23 @@ namespace APDilution
                 throw new Exception(string.Format("没有找到方法名为:{0}的试剂定义文件！", assayName));
         }
 
-        private void ParseCmdLine(ref string assayName)
+        private void ParseCmdLine(ref string assayName, ref int transferVolume)
         {
             this.Title = string.Format("Dilution {0}", strings.version);
 
             String[] args = System.Environment.GetCommandLineArgs();
-            if (args.Count() == 1)
+            if (args.Count() < 3)
                 throw new Exception("未指定方法名！");
+
             assayName = args[1];
+            transferVolume = int.Parse(args[2]);
             
         }
 
         private void GenerateWorklist(string fileName, string assayName, string barcode)
         {
 #if DEBUG
-            GenerateWorklistImpl(fileName, assayName, barcode);
+            GenerateWorklistImpl(fileName, assayName, barcode, transferVolume);
 #else
             try
             {
@@ -126,7 +127,7 @@ namespace APDilution
                     
                 }
 
-                GenerateWorklistImpl(sFile, Configurations.Instance.AssayName, sBarcode);
+                GenerateWorklistImpl(sFile, Configurations.Instance.AssayName, sBarcode, transferVolume);
                 SetInfo(string.Format("加载文件：{0}成功！\r\n方法名:{1}\r\n反应板条码:{2}",
            sFile, Configurations.Instance.AssayName, sBarcode));
             
@@ -140,7 +141,7 @@ namespace APDilution
 
         }
 
-        private void GenerateWorklistImpl(string fileName, string assayName, string reactionBarcode)
+        private void GenerateWorklistImpl(string fileName, string assayName, string reactionBarcode, int transferVolume)
         {
             ExcelReader excelReader = new ExcelReader();
             List<DilutionInfo> rawDilutionInfos = new List<DilutionInfo>();
@@ -160,8 +161,8 @@ namespace APDilution
             worklist wklist = new worklist();
             wklist.DoJob(assayName, reactionBarcode,
                 dilutionInfos, rawDilutionInfos, 
-                out firstPlateBuffer, 
-                out secondPlateBuffer);
+                out firstPlateBuffer,
+                out secondPlateBuffer, transferVolume);
 
          
             plateViewer.SetBuffer(firstPlateBuffer, secondPlateBuffer);

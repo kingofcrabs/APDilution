@@ -19,16 +19,17 @@ namespace APDilution
         const string breakPrefix = "B;";
         GradualDilutionInfo gradualDilutionInfo = new GradualDilutionInfo();
         List<PipettingInfo> firstSample2Dilution = new List<PipettingInfo>();
+        int transferVol = 0;
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
         public void DoJob(string assayName, string reactionBarcode,
             List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
-            out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat)
+            out List<PipettingInfo> firstPlateBufferFlat, out List<PipettingInfo> secondPlateBufferFlat, int transferVol)
         {
+            this.transferVol = transferVol;
 
             string subOutputFolder = Utility.GetSubOutputFolder();
             var header = "AnalysisNo,Src Labware,Src WellID,Volume,Dst Labware,Dst WellID";
-
-
+            
             firstPlateBufferFlat = null;
             secondPlateBufferFlat = null;
             this.rawDilutionInfos = rawDilutionInfos;
@@ -48,7 +49,6 @@ namespace APDilution
 
             List<List<PipettingInfo>> firstPlateBuffer = new List<List<PipettingInfo>>();
             List<List<PipettingInfo>> secondPlateBuffer = new List<List<PipettingInfo>>();
- 
           
             //from buffer & sample to dilution
             var bufferPipettings = GenerateBufferPipettingInfos(ref firstPlateBuffer, ref secondPlateBuffer);
@@ -484,6 +484,8 @@ namespace APDilution
            int vol = Math.Min(Configurations.Instance.DilutionVolume,
                     (int)(current.orgVolume * current.dilutionTimes));
            int parallelCnt = current.type == SampleType.Norm ? ExcelReader.SampleParallelCnt : ExcelReader.STDParallelCnt;
+           if (vol < parallelCnt * transferVol)
+               throw new Exception(string.Format("Sample with analysis no: {0}'s volume is not enough for transfering.", current.analysisNo));
            return vol / parallelCnt;
         }
 
