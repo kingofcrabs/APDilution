@@ -86,7 +86,7 @@ namespace APDilution
 #else
             try
             {
-                GenerateWorklistImpl(fileName, assayName, barcode);
+                GenerateWorklistImpl(fileName, assayName, barcode,transferVolume);
             }
 
             catch (Exception ex)
