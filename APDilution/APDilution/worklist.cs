@@ -62,13 +62,13 @@ namespace APDilution
 
             var sReactionBarcodeFile = Utility.GetOutputFolder() + "currentBarcode.txt";
             File.WriteAllText(sReactionBarcodeFile, reactionBarcode);
-            string tplFile = Utility.GetOutputFolder() + "current.tpl";
+            string tplFile = Utility.GetOutputFolder() + string.Format("{0}.tpl",reactionBarcode);
             TPLFile.Generate(tplFile, dilutionInfos);
 
-            var rCommands = GenerateRCommands(Helper.GetConfigFolder() + assayName + ".csv", dilutionInfos.Select(x => x.destWellID).ToList());
-            for (int i = 0; i < rCommands.Count; i++)
+            var rWklists = GenerateRWorklists(Helper.GetConfigFolder() + assayName + ".csv", dilutionInfos.Select(x => x.destWellID).ToList());
+            for (int i = 0; i < rWklists.Count; i++)
             {
-                File.WriteAllText(subOutputFolder + string.Format("r{0}.gwl", i + 1), rCommands[i]);
+                File.WriteAllLines(subOutputFolder + string.Format("r{0}.gwl", i + 1), rWklists[i]);
             }
             Copy2AssayFolder(tplFile, subOutputFolder, reactionBarcode);
         }
@@ -631,22 +631,62 @@ namespace APDilution
         }
 
 
-        public List<string> GenerateRCommands(string assayFile,List<int> dstWells)
+        public List<List<string>> GenerateRWorklists(string assayFile,List<int> dstWells)
         {
             List<string> contents = File.ReadAllLines(assayFile).ToList();
-            List<string> rCommands = new List<string>();
+            List<List<string>> rWorklists = new List<List<string>>();
             for(int i = 1; i< contents.Count; i++)
             {
                 List<string> tmpStrs = contents[i].Split(',').ToList();
                 string srcLabware = tmpStrs[0];
                 int vol = int.Parse(tmpStrs[1]);
-                rCommands.Add(GenerateRCommand(srcLabware, Configurations.Instance.ReactionPlateName, dstWells, vol));
+                rWorklists.Add(GenerateReagentWklist(srcLabware, Configurations.Instance.ReactionPlateName, dstWells, vol));
             }
-            return rCommands;
+            return rWorklists;
         }
 
+        private List<string> GenerateReagentWklist(string srcLabel,string destLabel,List<int> dstWells, int vol)
+        {
+            List<PipettingInfo> pipettings = new List<PipettingInfo>();
+            foreach(var dstWellID in dstWells)
+            {
+                int srcWellID = (dstWellID - 1) % 8 + 1;
+                pipettings.Add(new PipettingInfo(srcLabel, srcWellID, destLabel, dstWellID, vol,1,SampleType.Norm,"Empty"));
+            }
 
-        private string GenerateRCommand(string srcLabel,string destLabel,List<int> dstWells, int vol)
+            List<string> commands = new List<string>();
+            while (pipettings.Count > 0)
+            {
+                var first = pipettings.First();
+                var sameSrcPipettings = pipettings.Where(x => x.srcLabware == first.srcLabware && x.srcWellID == first.srcWellID).ToList();
+                string liquidClass = Configurations.Instance.ReagentLiquidClass;
+                int totalVol = (int)sameSrcPipettings.Sum(x => x.vol);
+                if (totalVol < Configurations.Instance.TipVolume)
+                {
+                    commands.Add(GetAspirate(first.srcLabware, first.srcWellID, totalVol, liquidClass));
+                    foreach (var pipettingInfo in sameSrcPipettings)
+                    {
+                        commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
+                    }
+                    commands.Add("W;");
+                }
+                else
+                {
+                    foreach (var pipettingInfo in sameSrcPipettings)
+                    {
+                        commands.Add(GetAspirate(pipettingInfo.srcLabware, pipettingInfo.srcWellID, pipettingInfo.vol, liquidClass));
+                        commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
+                    }
+                    commands.Add("W;");
+                }
+
+                
+                pipettings = pipettings.Except(sameSrcPipettings).ToList();
+            }
+            return commands;
+        }
+
+        private string GenerateRCommand(string srcLabel, string destLabel, List<int> dstWells, int vol)
         {
             //R;AspirateParameters;DispenseParameters;Volume;LiquidClass;NoOfDitiRe
             //uses;NoOfMultiDisp;Direction[;ExcludeDestWell]*
@@ -655,14 +695,14 @@ namespace APDilution
             //and
             //DispenseParameters =
             //DestRackLabel; DestRackID; DestRackType; DestPosStart; DestPosEnd;
-            
+
             string aspParameters = string.Format("{0};;;{1};{2};", srcLabel, 1, 8);
             int maxWell = dstWells.Max();
             int minWell = dstWells.Min();
             string exclude = "";
-            for(int wellID = minWell; wellID < maxWell; wellID++)
+            for (int wellID = minWell; wellID < maxWell; wellID++)
             {
-                if(!dstWells.Contains(wellID))
+                if (!dstWells.Contains(wellID))
                 {
                     exclude += ";";
                     exclude += wellID;
@@ -672,19 +712,19 @@ namespace APDilution
             //R;AspirateParameters;DispenseParameters;Volume;LiquidClass;NoOfDitiRe
             //uses;NoOfMultiDisp;Direction[;ExcludeDestWell]*
             int noOfMultiDisp = 0;
-            if(vol <= 50)
+            if (vol <= 50)
             {
                 noOfMultiDisp = 12;
             }
-            else if(vol <= 110)
+            else if (vol <= 110)
             {
                 noOfMultiDisp = 6;
             }
-            else if(vol <= 200)
+            else if (vol <= 200)
             {
                 noOfMultiDisp = 4;
             }
-            else if( vol <= 300)
+            else if (vol <= 300)
             {
                 noOfMultiDisp = 3;
             }
@@ -694,7 +734,7 @@ namespace APDilution
             }
 
 
-            string rCommand =  string.Format("R;{0}{1}{2};{3};{4};{5};{6}{7}",
+            string rCommand = string.Format("R;{0}{1}{2};{3};{4};{5};{6}{7}",
                 aspParameters,
                 dspParameters,
                 vol,
