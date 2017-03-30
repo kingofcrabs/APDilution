@@ -159,6 +159,17 @@ namespace APDilution
                 rawDilutionInfos = rawDilutionInfos.Except(normalSamples).ToList();
             }
 
+            if(Configurations.Instance.QCFirst)//move QC to very beginning
+            {
+                var QCs = rawDilutionInfos.Where(x => x.type == SampleType.HQC
+                    || x.type == SampleType.MQC
+                    || x.type == SampleType.LQC).ToList();
+                if (QCs.Count != 0)
+                {
+                    rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
+                    rawDilutionInfos.InsertRange(0,QCs);
+                }
+            }  
 
             for (int i = 0; i < rawDilutionInfos.Count; i++)
             {
@@ -278,25 +289,48 @@ namespace APDilution
             SampleType sampleType = rawDilutionInfo.type;
             int seqNo = rawDilutionInfo.seqIDinThisType;
             uint orgVolume = rawDilutionInfo.orgVolume;
+          
             if (remainingWellIDs.Count == 0)
                 throw new Exception(string.Format("在进行到分析号为：{0}号样本时已经没有足够孔位。",
                     rawDilutionInfo.analysisNo));
-            firstWellID4Parallel = remainingWellIDs.Min();
+           
+            //IsQC(sampleType)
+            
+             
+            firstWellID4Parallel = IsQC(sampleType) ? GetFirstWellID4QC(sampleType,parallelCnt) : remainingWellIDs.Min();
             if (sampleType == SampleType.Norm)
                 parallelCnt = sampleParallelCnt;
 
-            for(int i = 0; i< parallelCnt; i++)
+            for (int i = 0; i < parallelCnt; i++)
             {
                 int wellID = firstWellID4Parallel + i * 8;
                 if (!remainingWellIDs.Contains(wellID))
-                    throw new Exception(string.Format("样品：{0}需要孔位：{1}",animalNo,wellID));
+                    throw new Exception(string.Format("样品：{0}需要孔位：{1}", animalNo, wellID));
                 remainingWellIDs.Remove(wellID);
-                DilutionInfo dilutionInfo = new DilutionInfo(sampleType,orgVolume,
-                    dilutionTimes, 
+                DilutionInfo dilutionInfo = new DilutionInfo(sampleType, orgVolume,
+                    dilutionTimes,
                     seqNo, wellID, 1, animalNo);
                 dilutionInfos.Add(dilutionInfo);
             }
+           
+
             return dilutionInfos;
+        }
+
+        private int GetFirstWellID4QC(SampleType sampleType, int parallelCnt)
+        {
+            Dictionary<SampleType, int> sampleType_val = new Dictionary<SampleType, int>();
+            sampleType_val.Add(SampleType.HQC, 2);
+            sampleType_val.Add(SampleType.MQC, 1);
+            sampleType_val.Add(SampleType.LQC, 0);
+            return 96 - sampleType_val[sampleType] - (parallelCnt - 1) * 8;
+        }
+
+        private bool IsQC(SampleType sampleType)
+        {
+            return sampleType == SampleType.HQC ||
+                   sampleType == SampleType.MQC ||
+                   sampleType == SampleType.LQC;
         }
 
         private int ParseSeqNo(string wellInfo)
@@ -381,7 +415,7 @@ namespace APDilution
         }
     }
 
-    public struct DilutionInfo
+    public class DilutionInfo
     {
         public SampleType type;
         public int dilutionTimes;

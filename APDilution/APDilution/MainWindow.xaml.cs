@@ -130,7 +130,7 @@ namespace APDilution
                 GenerateWorklistImpl(sFile, Configurations.Instance.AssayName, sBarcode, transferVolume);
                 SetInfo(string.Format("加载文件：{0}成功！\r\n方法名:{1}\r\n反应板条码:{2}",
            sFile, Configurations.Instance.AssayName, sBarcode));
-            
+                Configurations.Instance.WriteResult(true, "");
             }
             catch(Exception ex)
             {
@@ -248,6 +248,9 @@ namespace APDilution
 
         private void SwitchView(int index)
         {
+            if (plateViewer == null)
+                return;
+
             Dictionary<int, Plate2Show> index_Name = new Dictionary<int, Plate2Show>();
             index_Name.Add(0, Plate2Show.reaction);
             index_Name.Add(1, Plate2Show.dilution1);

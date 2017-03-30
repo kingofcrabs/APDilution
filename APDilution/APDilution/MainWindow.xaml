@@ -18,7 +18,7 @@
             </Grid.RowDefinitions>
             <Label>孔位信息：</Label>
             <Grid Grid.Row="1" Name="canvas">
-                
+
             </Grid>
         </Grid>
         <Grid Grid.Column="1" Margin="2,1,2,1">
@@ -26,7 +26,7 @@
                 <RowDefinition Height="100"/>
                 <RowDefinition Height="70"/>
                 <RowDefinition Height="*"/>
-                
+
             </Grid.RowDefinitions>
             <StackPanel>
                 <Label>板名：</Label>
@@ -43,7 +43,7 @@
                     <Button Width="60" Name="btnSetBarcode" Click="btnSetBarcode_Click">设置</Button>
                 </StackPanel>
 
-            </StackPanel>            
+            </StackPanel>
             <Grid Grid.Row="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="30"/>
@@ -52,10 +52,10 @@
                 </Grid.RowDefinitions>
                 <Label>信息：</Label>
                 <TextBox Name="txtInfo" TextWrapping="Wrap" Grid.Row="1" ></TextBox>
-                
-                <Button Grid.Row="3" Margin="1,1,1,1" Name="btnOk" IsEnabled="False" Content="确定" Click="btnOk_Click"/>
+
+                <Button Grid.Row="2" Margin="1,0,1,1" Name="btnOk" IsEnabled="False" Content="确定" Click="btnOk_Click" Height="38" VerticalAlignment="Bottom"/>
             </Grid>
-            
+
         </Grid>
     </Grid>
 </Window>

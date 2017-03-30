@@ -62,7 +62,7 @@ namespace APDilution
 
             var sReactionBarcodeFile = Utility.GetOutputFolder() + "currentBarcode.txt";
             File.WriteAllText(sReactionBarcodeFile, reactionBarcode);
-            string tplFile = Utility.GetOutputFolder() + string.Format("{0}.tpl",reactionBarcode);
+            string tplFile = Utility.GetTPLFolder() + string.Format("{0}.tpl", reactionBarcode);
             TPLFile.Generate(tplFile, dilutionInfos);
 
             var rWklists = GenerateRWorklists(Helper.GetConfigFolder() + assayName + ".csv", dilutionInfos.Select(x => x.destWellID).ToList());
@@ -457,25 +457,6 @@ namespace APDilution
             }
             return commands;
         }
-
-        //private IEnumerable<string> FormatTransfer(List<PipettingInfo> transferPipettings, string liquidClass)
-        //{
-        //    List<string> commands = new List<string>();
-        //    for (int col = 0; col < 12; col++ )
-        //    {
-        //        int startID = col * 8 + 1;
-        //        int endID = col * 8 + 8;
-        //        var sameColPipettings = transferPipettings.Where(x => x.dstWellID >= startID && x.dstWellID <= endID).ToList();
-        //        foreach (var pipettingInfo in sameColPipettings)
-        //        {
-        //            commands.Add(GetAspirate(pipettingInfo.srcLabware, pipettingInfo.srcWellID, pipettingInfo.vol, liquidClass));
-        //            commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
-        //            commands.Add("W;");
-        //        }
-        //        commands.Add("B;");
-        //    }
-        //    return commands;
-        //}
 
 
         private IEnumerable<string> Format(List<PipettingInfo> pipettingInfos,string liquidClass)

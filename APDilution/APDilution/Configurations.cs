@@ -64,7 +64,18 @@ namespace APDilution
             }
             return sOutputFolder;
         }
-        
+
+        public static string GetTPLFolder()
+        {
+            string sFolder = GetOutputFolder();
+            string sTPLFolder = sFolder + "TPL\\";
+            if (!Directory.Exists(sTPLFolder))
+            {
+                Directory.CreateDirectory(sTPLFolder);
+            }
+            return sTPLFolder;
+        }
+
         
         public static string GetOutputFolder()
         {
@@ -145,6 +156,7 @@ namespace APDilution
             TipVolume = int.Parse(ConfigurationManager.AppSettings["TipVolume"]);
             StandardGradual = bool.Parse(ConfigurationManager.AppSettings["StandardGradual"]);
             ReagentLiquidClass = ConfigurationManager.AppSettings["ReagentLiquidClass"];
+            QCFirst = bool.Parse(ConfigurationManager.AppSettings["QCFirst"]);
         }
 
         public void WriteResult(bool bSuccess, string errMsg)
@@ -196,6 +208,7 @@ namespace APDilution
         public bool StandardGradual { get; set; }
 
         public string ReactionBarcode { get; set; }
+        public bool QCFirst { get; set; }
 
         public string ReagentLiquidClass { get; set; }
         public string AssayName { get; set; }
