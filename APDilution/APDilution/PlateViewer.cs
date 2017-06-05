@@ -233,7 +233,13 @@ namespace APDilution
             {
                 upperLine = string.Format("{0}{1:D2}_{2}", sType, dilutionInfo.seqIDinThisType, dilutionInfo.gradualStep);
             }
-
+            if (dilutionInfo.type == SampleType.Norm ||
+                dilutionInfo.type == SampleType.HQC || 
+                dilutionInfo.type == SampleType.MQC || 
+                dilutionInfo.type == SampleType.LQC)
+            {
+                upperLine = dilutionInfo.analysisNo;
+            }
             string lowerLine = GetDilutionDescription(dilutionInfo);
             int xOffset = dilutionInfo.type == SampleType.Norm ? (int)(GetWellWidth() / 3) : 10;
             DrawText(upperLine, new Point(xStart + xOffset / 3, yStart + GetWellHeight() / 10), drawingContext, 16);

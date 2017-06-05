@@ -159,17 +159,42 @@ namespace APDilution
                 rawDilutionInfos = rawDilutionInfos.Except(normalSamples).ToList();
             }
 
-            if(Configurations.Instance.QCFirst)//move QC to very beginning
+            //if(Configurations.Instance.QCFirst)//move QC to very beginning
+            //{
+            //    var QCs = rawDilutionInfos.Where(x => x.type == SampleType.HQC
+            //        || x.type == SampleType.MQC
+            //        || x.type == SampleType.LQC).ToList();
+            //    if (QCs.Count != 0)
+            //    {
+            //        rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
+            //        rawDilutionInfos.InsertRange(0,QCs);
+            //    }
+            //}
+            //else //move QC to last
+            //{
+            //    var QCs = rawDilutionInfos.Where(x => x.type == SampleType.HQC
+            //                       || x.type == SampleType.MQC
+            //                       || x.type == SampleType.LQC).ToList();
+            //    if (QCs.Count != 0)
+            //    {
+            //        rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
+            //        rawDilutionInfos.InsertRange(rawDilutionInfos.Count, QCs);
+            //    }
+            //}
+
+            var QCs = rawDilutionInfos.Where(x => IsFirstQC(x) ).ToList();
+            if (QCs.Count != 0)
             {
-                var QCs = rawDilutionInfos.Where(x => x.type == SampleType.HQC
-                    || x.type == SampleType.MQC
-                    || x.type == SampleType.LQC).ToList();
-                if (QCs.Count != 0)
-                {
-                    rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
-                    rawDilutionInfos.InsertRange(0,QCs);
-                }
-            }  
+                rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
+                rawDilutionInfos.InsertRange(0, QCs);
+            }
+
+            QCs = rawDilutionInfos.Where(x =>IsSecondQC(x)).ToList();
+            if (QCs.Count != 0)
+            {
+                rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
+                rawDilutionInfos.InsertRange(rawDilutionInfos.Count, QCs);
+            }
 
             for (int i = 0; i < rawDilutionInfos.Count; i++)
             {
@@ -230,6 +255,16 @@ namespace APDilution
             dilutionInfos = dilutionInfos.OrderBy(x => x.destWellID).ToList();
             return dilutionInfos;
         }
+
+        private bool IsFirstQC(DilutionInfo dilutionInfo)
+        {
+            return IsQC(dilutionInfo.type) && dilutionInfo.analysisNo.Contains("1");
+        }
+        private bool IsSecondQC(DilutionInfo dilutionInfo)
+        {
+            return IsQC(dilutionInfo.type) && dilutionInfo.analysisNo.Contains("2");
+        }
+
 
         private void CheckDuplicated(List<DilutionInfo> rawDilutionInfos)
         {
@@ -297,7 +332,7 @@ namespace APDilution
             //IsQC(sampleType)
             
              
-            firstWellID4Parallel = IsQC(sampleType) ? GetFirstWellID4QC(sampleType,parallelCnt) : remainingWellIDs.Min();
+            firstWellID4Parallel = IsQC(sampleType) ? GetFirstWellID4QC(sampleType,parallelCnt,rawDilutionInfo.analysisNo) : remainingWellIDs.Min();
             if (sampleType == SampleType.Norm)
                 parallelCnt = sampleParallelCnt;
 
@@ -317,13 +352,24 @@ namespace APDilution
             return dilutionInfos;
         }
 
-        private int GetFirstWellID4QC(SampleType sampleType, int parallelCnt)
+        private int GetFirstWellID4QC(SampleType sampleType, int parallelCnt,string analysisNo)
         {
+            int group = analysisNo.Contains("01") ? 1 : 2;
             Dictionary<SampleType, int> sampleType_val = new Dictionary<SampleType, int>();
-            sampleType_val.Add(SampleType.HQC, 2);
-            sampleType_val.Add(SampleType.MQC, 1);
-            sampleType_val.Add(SampleType.LQC, 0);
-            return 96 - sampleType_val[sampleType] - (parallelCnt - 1) * 8;
+            sampleType_val.Add(SampleType.HQC, 1);
+            sampleType_val.Add(SampleType.MQC, 2);
+            sampleType_val.Add(SampleType.LQC, 3);
+            int val = sampleType_val[sampleType];
+            
+            if(group == 2)
+            {
+                sampleType_val.Clear();
+                sampleType_val.Add(SampleType.HQC, 2);
+                sampleType_val.Add(SampleType.MQC, 1);
+                sampleType_val.Add(SampleType.LQC, 0);
+                val =  96 - sampleType_val[sampleType] - (parallelCnt - 1) * 8;
+            }
+            return val;
         }
 
         private bool IsQC(SampleType sampleType)

@@ -104,7 +104,11 @@ namespace APDilution
         private void btnSetBarcode_Click(object sender, RoutedEventArgs e)
         {
             btnOk.IsEnabled = false;
+#if DEBUG
+
+#else
             try
+#endif
             {
                 if(txtBarcode.Text == "")
                 {
@@ -132,11 +136,15 @@ namespace APDilution
            sFile, Configurations.Instance.AssayName, sBarcode));
                 Configurations.Instance.WriteResult(true, "");
             }
+#if DEBUG
+#else
             catch(Exception ex)
-            {
+             {
                 SetErrorInfo(ex.Message);
                 return;
             }
+#endif
+
             btnOk.IsEnabled = true;
 
         }
