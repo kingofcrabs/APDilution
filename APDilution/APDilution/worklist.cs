@@ -113,11 +113,13 @@ namespace APDilution
             foreach(var pair in name_pipettings)
             {
                 var sReadableFile = subOutputFolder + string.Format("{0}_readable.csv",pair.Key);
+                var sReadablePDF = subOutputFolder + string.Format("{0}_readable.pdf",pair.Key);
                 List<string> readableCommands = new List<string>();
                 readableCommands.Add(header);
                 //var pipettings = pair.Value.OrderBy(x => x.analysisNo).ToList();
                 readableCommands.AddRange(FormatReadable(pair.Value));
                 File.WriteAllLines(sReadableFile, readableCommands, Encoding.Default);
+                ExcelWriter.Excel2Pdf(sReadableFile, sReadablePDF);
             }
            
         }

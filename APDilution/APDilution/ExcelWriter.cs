@@ -5,6 +5,8 @@ using System.Text;
 using Microsoft.Office.Interop.Excel;
 using System;
 using System.Drawing;
+using System.Reflection;
+using System.Diagnostics;
 
 
 namespace APDilution
@@ -17,6 +19,68 @@ namespace APDilution
         {
             names.Add(name);
             pipettingInfosList.Add(pipettingInfos);
+        }
+
+        public static short Excel2Pdf(string orgPath, string pdfPath)
+        {
+            short convertExcel2PdfResult = -1;
+
+            // Create COM Objects
+            Microsoft.Office.Interop.Excel.Application excelApplication = null;
+            Microsoft.Office.Interop.Excel.Workbook excelWorkbook = null;
+            object unknownType = Type.Missing;
+            // Create new instance of Excel
+            try
+            {
+                //open excel application
+                excelApplication = new Microsoft.Office.Interop.Excel.Application
+                {
+                    ScreenUpdating = false,
+                    DisplayAlerts = false
+                };
+
+                //open excel sheet
+                if (excelApplication != null)
+                    excelWorkbook = excelApplication.Workbooks.Open(orgPath, unknownType, unknownType,
+                                                                    unknownType, unknownType, unknownType,
+                                                                    unknownType, unknownType, unknownType,
+                                                                    unknownType, unknownType, unknownType,
+                                                                    unknownType, unknownType, unknownType);
+                if (excelWorkbook != null)
+                {
+
+
+                    // Call Excel's native export function (valid in Office 2007 and Office 2010, AFAIK)
+                    excelWorkbook.ExportAsFixedFormat(Microsoft.Office.Interop.Excel.XlFixedFormatType.xlTypePDF,
+                                                      pdfPath,
+                                                      unknownType, unknownType, unknownType, unknownType, unknownType,
+                                                      unknownType, unknownType);
+
+                    convertExcel2PdfResult = 0;
+
+                }
+                else
+                {
+                    Console.WriteLine("Error occured for conversion of office excel to PDF ");
+                    convertExcel2PdfResult = 504;
+                }
+
+            }
+            catch (Exception exExcel2Pdf)
+            {
+                Console.WriteLine("Error occured for conversion of office excel to PDF, Exception: ", exExcel2Pdf);
+                convertExcel2PdfResult = 504;
+            }
+            finally
+            {
+                // Close the workbook, quit the Excel, and clean up regardless of the results...
+
+                if (excelWorkbook != null)
+                    excelWorkbook.Close(unknownType, unknownType, unknownType);
+                if (excelApplication != null) 
+                    excelApplication.Quit();
+            }
+            return convertExcel2PdfResult;
         }
 
         public void Save()
