@@ -21,6 +21,7 @@ namespace APDilution
         GradualDilutionInfo gradualDilutionInfo = new GradualDilutionInfo();
         List<PipettingInfo> firstSample2Dilution = new List<PipettingInfo>();
         int transferVol = 0;
+        bool mrdFirst = bool.Parse(ConfigurationManager.AppSettings["MRDFisrt"]);
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
         public void DoJob(string assayName, string reactionBarcode,
             List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
@@ -44,10 +45,10 @@ namespace APDilution
             //from buffer & sample to dilution
             List<List<PipettingInfo>> firstPlateBuffer = new List<List<PipettingInfo>>();
             List<List<PipettingInfo>> secondPlateBuffer = new List<List<PipettingInfo>>();
-            
-            var bufferPipettings = GenerateBufferPipettingInfos(ref firstPlateBuffer, ref secondPlateBuffer);
-            var samplePipettings = GenerateSamplePipettingInfos();
-            var transferPipettings = GenerateTransferPipettingInfos();
+            int firstPlateCnt = 0;
+            var bufferPipettings = GenerateBufferPipettingInfos(ref firstPlateBuffer, ref secondPlateBuffer, ref firstPlateCnt);
+            var samplePipettings = GenerateSamplePipettingInfos(firstPlateCnt);
+            var transferPipettings = GenerateTransferPipettingInfos(firstPlateCnt);
             GenerateReadableCommands(bufferPipettings, samplePipettings, transferPipettings, gradualPipettings, subOutputFolder);
             
             //convert to flat
@@ -119,7 +120,7 @@ namespace APDilution
                 //var pipettings = pair.Value.OrderBy(x => x.analysisNo).ToList();
                 readableCommands.AddRange(FormatReadable(pair.Value));
                 File.WriteAllLines(sReadableFile, readableCommands, Encoding.Default);
-                ExcelWriter.Excel2Pdf(sReadableFile, sReadablePDF);
+                ExcelWriter.SaveReadable(sReadablePDF, pair.Value);
             }
            
         }
@@ -473,9 +474,8 @@ namespace APDilution
             return commands;
         }
 
-        internal List<PipettingInfo> GenerateTransferPipettingInfos()
+        internal List<PipettingInfo> GenerateTransferPipettingInfos(int firstPlateCnt)
         {
-            int firstPlateCnt = GetMaxSampleCntFirstDilutionPlate();
             var firstPlateSamples = rawDilutionInfos.Take(firstPlateCnt).ToList();
             var secondPlateSamples = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
@@ -548,9 +548,8 @@ namespace APDilution
         }
 
         #region sample
-        internal List<PipettingInfo> GenerateSamplePipettingInfos()
+        internal List<PipettingInfo> GenerateSamplePipettingInfos(int firstPlateCnt)
         {
-            int firstPlateCnt = GetMaxSampleCntFirstDilutionPlate();
             var firstPlateSamples = rawDilutionInfos.Take(firstPlateCnt).ToList();
             var secondPlateSamples = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
@@ -565,6 +564,7 @@ namespace APDilution
         private List<PipettingInfo> GenerateSamplePipettingInfos(List<DilutionInfo> dilutionInfos, string destPlateLabel)
         {
             int columnIndex = 0;
+
             List<PipettingInfo> samplePipettingInfos = new List<PipettingInfo>();
             if(Configurations.Instance.IsGradualPipetting)
             {
@@ -824,18 +824,19 @@ namespace APDilution
         #endregion
         #region buffer
 
-        internal List<PipettingInfo> GenerateBufferPipettingInfos(ref List<List<PipettingInfo>> firstPlate,ref List<List<PipettingInfo>>secondPlate)
+        internal List<PipettingInfo> GenerateBufferPipettingInfos(ref List<List<PipettingInfo>> firstPlate,ref List<List<PipettingInfo>>secondPlate, ref int firstPlateCnt)
         {
             if(Configurations.Instance.IsGradualPipetting && rawDilutionInfos.Count > 8)
                 throw new Exception("样品数不得大于8!");
-            int firstPlateCnt = GetMaxSampleCntFirstDilutionPlate();
-            List<DilutionInfo> firstPlateDilutions = rawDilutionInfos.Take(firstPlateCnt).ToList();
+            List<DilutionInfo> toDoDilutionInfos = rawDilutionInfos.ToList();
+            firstPlateCnt = toDoDilutionInfos.Count; //save the total
             var secondPlateDilutions = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
-            firstPlate = GenerateBufferPipettingInfos(firstPlateDilutions, firstDilutionPlateName);
-           
+
+            firstPlate = GenerateBufferPipettingInfos(ref toDoDilutionInfos, firstDilutionPlateName);
+            firstPlateCnt -= toDoDilutionInfos.Count; //substract the remain cnt
             plateName_LastDilutionPositions.Add(firstDilutionPlateName, GetLastPositions(firstPlate));
-            secondPlate = GenerateBufferPipettingInfos(secondPlateDilutions, secondDilutionPlateName);
+            secondPlate = GenerateBufferPipettingInfos(ref toDoDilutionInfos, secondDilutionPlateName);
             plateName_LastDilutionPositions.Add(secondDilutionPlateName, GetLastPositions(secondPlate));
             var flatFirstPlate = Flatten(firstPlate);
             var flatSecondPlate = Flatten(secondPlate);
@@ -936,7 +937,7 @@ namespace APDilution
             return vals;
         }
 
-        private List<List<PipettingInfo>> GenerateBufferPipettingInfos(List<DilutionInfo> dilutionInfos, string destPlateLabel)
+        private List<List<PipettingInfo>> GenerateBufferPipettingInfos(ref List<DilutionInfo> dilutionInfos, string destPlateLabel)
         {
             int columnIndex = 0;
             List<List<PipettingInfo>> bufferPipettingInfos = new List<List<PipettingInfo>>();
@@ -955,16 +956,20 @@ namespace APDilution
                     var thisColumnPipettingInfos = dilutionInfos.Take(8).ToList();
                     if (dilutionInfos.Exists(x => x.dilutionTimes != 0))
                     {
+                        
                         var thisColumnBufferInfos = GenerateBufferPipettingInfos(thisColumnPipettingInfos, destPlateLabel, columnIndex);
+                        int maxColumnNeeded = thisColumnBufferInfos.Max(x => x.Count);
+                        if (columnIndex + maxColumnNeeded > 11)
+                            break;
                         bufferPipettingInfos.AddRange(GenerateBufferPipettingInfos(thisColumnPipettingInfos, destPlateLabel, columnIndex));
-                        columnIndex += thisColumnBufferInfos.Max(x => x.Count);
+                        columnIndex += maxColumnNeeded;
+                        
                     }
                         
                     dilutionInfos = dilutionInfos.Skip(thisColumnPipettingInfos.Count).ToList();
                     //columnIndex += GetMaxDilutionWellsNeeded(thisColumnPipettingInfos);
                 }
             }
-            
             return bufferPipettingInfos;
         }
 
@@ -1088,18 +1093,52 @@ namespace APDilution
             List<int> eachStepTimes = new List<int>();
             int mrdSteps = 0;
             List<int> dilutionVolumes = GetEachStepVolume(times, dilutionInfo.orgVolume, true, ref eachStepTimes,ref mrdSteps);
-                
-            for(int i = 0; i < dilutionVolumes.Count; i++)
+            
+ 
+            //if(mrdFirst)
+            //{
+            for (int i = 0; i < dilutionVolumes.Count; i++)
             {
-                string srcLabware = i >= mrdSteps ? Configurations.Instance.Buffer2LabwareName : Configurations.Instance.Buffer1LabwareName;
+                string srcLabware = i < mrdSteps ? Configurations.Instance.Buffer1LabwareName : Configurations.Instance.Buffer2LabwareName;
+                if(!mrdFirst)
+                {
+                    int normalSteps = dilutionVolumes.Count - mrdSteps;
+                    srcLabware = i < normalSteps ? Configurations.Instance.Buffer2LabwareName : Configurations.Instance.Buffer1LabwareName;
+                }
                 var vol = dilutionVolumes[i];
                 double thisWellTimes = eachStepTimes[i];
                 int dstWellID = GetWellID(columnIndex++, indexInColumn);
                 PipettingInfo pipettingInfo = new PipettingInfo(srcLabware, indexInColumn + 1,
                     destPlateLabel, dstWellID, vol,
-                    thisWellTimes, dilutionInfo.type,dilutionInfo.analysisNo);
+                    thisWellTimes, dilutionInfo.type, dilutionInfo.analysisNo);
                 pipettingInfos.Add(pipettingInfo);
             }
+            //}
+            //else
+            //{
+            //    var mrdDilutions = dilutionVolumes.Take(mrdSteps).ToList();
+            //    var notMrdDilutions = dilutionVolumes.Skip(mrdSteps).ToList();
+            //    var mrdEachStepTimes = eachStepTimes.Take(mrdSteps).ToList();
+            //    var notMrdEachStepTimes = eachStepTimes.Skip(mrdSteps).ToList();
+
+            //    List<int> resortedDilutionVols =  new List<int>(notMrdDilutions);
+            //    resortedDilutionVols.AddRange(mrdDilutions);
+                
+            //    List<int> resortedEachStepTimes = new List<int>(notMrdEachStepTimes);
+            //    resortedEachStepTimes.AddRange(mrdEachStepTimes);
+
+            //    for (int i = 0; i < resortedDilutionVols.Count; i++)
+            //    {
+            //        string srcLabware = i < notMrdDilutions.Count ? Configurations.Instance.Buffer2LabwareName : Configurations.Instance.Buffer1LabwareName;
+            //        var vol = resortedDilutionVols[i];
+            //        double thisWellTimes = resortedEachStepTimes[i];
+            //        int dstWellID = GetWellID(columnIndex++, indexInColumn);
+            //        PipettingInfo pipettingInfo = new PipettingInfo(srcLabware, indexInColumn + 1,
+            //            destPlateLabel, dstWellID, vol,
+            //            thisWellTimes, dilutionInfo.type, dilutionInfo.analysisNo);
+            //        pipettingInfos.Add(pipettingInfo);
+            //    }
+            //}
             return pipettingInfos;
         }
         #endregion
@@ -1144,7 +1183,17 @@ namespace APDilution
             }
             bool processedInMRD = times == 1 && mrdTimes != 1; //has been processed in mrd
             if(!processedInMRD)
-                eachStepTimes.AddRange(factorFinder.GetBestFactors(times));
+            {
+                var normalStepTimes = factorFinder.GetBestFactors(times);
+                if(mrdFirst)
+                {
+                    eachStepTimes.AddRange(normalStepTimes);
+                }
+                else
+                {
+                    eachStepTimes.InsertRange(0,normalStepTimes);
+                }
+            }
             List<int> vols = new List<int>();
             foreach (var thisStepTimes in eachStepTimes)
             {

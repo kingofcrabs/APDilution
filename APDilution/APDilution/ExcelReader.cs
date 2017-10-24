@@ -133,7 +133,7 @@ namespace APDilution
                     break;
                 string animalNo = arryItem[i, 1].ToString();
                 if (arryItem.GetLength(1) < expectedColumnCnt)
-                    throw new Exception(string.Format("动物号为：{0}的样本信息不全！", animalNo));
+                    throw new Exception(string.Format("样品号为：{0}的样本信息不全！", animalNo));
 
                 int sampleID = int.Parse(arryItem[i, 2].ToString());
                 int dilutionTimes = int.Parse(arryItem[i, 3].ToString());
@@ -145,7 +145,7 @@ namespace APDilution
                 }
                 uint volume = uint.Parse(sVolume);
                 if (volume < 20)
-                    throw new Exception(string.Format("动物号为：{0}的样本，体积太少！", animalNo));
+                    throw new Exception(string.Format("样品号为：{0}的样本，体积太少！", animalNo));
                 rawDilutionInfos.Add(new DilutionInfo(ParseSampleType(animalNo),volume,
                     dilutionTimes, sampleID, 0, 1, animalNo));
             }
@@ -159,29 +159,7 @@ namespace APDilution
                 rawDilutionInfos = rawDilutionInfos.Except(normalSamples).ToList();
             }
 
-            //if(Configurations.Instance.QCFirst)//move QC to very beginning
-            //{
-            //    var QCs = rawDilutionInfos.Where(x => x.type == SampleType.HQC
-            //        || x.type == SampleType.MQC
-            //        || x.type == SampleType.LQC).ToList();
-            //    if (QCs.Count != 0)
-            //    {
-            //        rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
-            //        rawDilutionInfos.InsertRange(0,QCs);
-            //    }
-            //}
-            //else //move QC to last
-            //{
-            //    var QCs = rawDilutionInfos.Where(x => x.type == SampleType.HQC
-            //                       || x.type == SampleType.MQC
-            //                       || x.type == SampleType.LQC).ToList();
-            //    if (QCs.Count != 0)
-            //    {
-            //        rawDilutionInfos = rawDilutionInfos.Except(QCs).ToList();
-            //        rawDilutionInfos.InsertRange(rawDilutionInfos.Count, QCs);
-            //    }
-            //}
-
+          
             var QCs = rawDilutionInfos.Where(x => IsFirstQC(x) ).ToList();
             if (QCs.Count != 0)
             {

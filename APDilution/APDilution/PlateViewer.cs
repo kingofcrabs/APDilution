@@ -199,7 +199,8 @@ namespace APDilution
             if (plateBuffer == null || !plateBuffer.Exists(x => x.dstWellID == wellID))
                 return;
             DrawColor(wellID, xStart, yStart, drawingContext);
-            pipettingInfo = plateBuffer.Where(x => x.dstWellID == wellID).First();
+            var sameDstWellIDBuffers = plateBuffer.Where(x => x.dstWellID == wellID).ToList();
+            pipettingInfo = sameDstWellIDBuffers.First();
             bool firstBuffer = pipettingInfo.srcLabware == Configurations.Instance.Buffer1LabwareName;
             if(firstBuffer)
             {
