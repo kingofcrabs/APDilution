@@ -22,6 +22,7 @@ namespace APDilution
         List<PipettingInfo> firstSample2Dilution = new List<PipettingInfo>();
         int transferVol = 0;
         bool mrdFirst = bool.Parse(ConfigurationManager.AppSettings["MRDFisrt"]);
+        uint deadVolume = uint.Parse(ConfigurationManager.AppSettings["DeadVolume"]);
         //Dictionary<DilutionInfo, List<int>> dilutionInfo_WellID = new Dictionary<DilutionInfo, List<int>>();
         public void DoJob(string assayName, string reactionBarcode,
             List<DilutionInfo> dilutionInfos, List<DilutionInfo> rawDilutionInfos,
@@ -45,9 +46,12 @@ namespace APDilution
             //from buffer & sample to dilution
             List<List<PipettingInfo>> firstPlateBuffer = new List<List<PipettingInfo>>();
             List<List<PipettingInfo>> secondPlateBuffer = new List<List<PipettingInfo>>();
+            List<PipettingInfo> firstColumnPipettings = new List<PipettingInfo>();
             int firstPlateCnt = 0;
             var bufferPipettings = GenerateBufferPipettingInfos(ref firstPlateBuffer, ref secondPlateBuffer, ref firstPlateCnt);
-            var samplePipettings = GenerateSamplePipettingInfos(firstPlateCnt);
+
+
+            var samplePipettings = GenerateSamplePipettingInfos(firstPlateCnt,ref firstColumnPipettings);
             var transferPipettings = GenerateTransferPipettingInfos(firstPlateCnt);
             GenerateReadableCommands(bufferPipettings, samplePipettings, transferPipettings, gradualPipettings, subOutputFolder);
             
@@ -56,7 +60,8 @@ namespace APDilution
 
             GenerateBufferWorklist(bufferPipettings,subOutputFolder);
             //after each column's pipetting, shake 
-            var firstColumnPipettings = GenerateFirstColumnWorklist(samplePipettings, subOutputFolder);
+            //var firstColumnPipettings = GenerateFirstColumnWorklist(samplePipettings, subOutputFolder);
+            GenerateFirstColumnWorklist(firstColumnPipettings, subOutputFolder);
             samplePipettings = samplePipettings.Except(firstColumnPipettings).ToList();
 
             GenerateDilutionAndTransferWorklist(samplePipettings, transferPipettings, subOutputFolder);
@@ -131,10 +136,12 @@ namespace APDilution
             List<string> strs = new List<string>();
             strs.Add(GetComment("sample"));
             strs.AddRange(GetStringForEachColumn(samplePipettings, Configurations.Instance.SampleLiquidClass));
-            
+            File.WriteAllLines(dilutionFile, strs);
+            string transferFile = subOutputFolder + "transfer.gwl";
+            strs.Clear();
             strs.Add(GetComment("transfer"));
             strs.AddRange(FormatTransfer(transferPipettings, Configurations.Instance.TransferLiquidClass));
-            File.WriteAllLines(dilutionFile, strs);
+            File.WriteAllLines(transferFile, strs);
         }
 
         private void GenerateBufferWorklist(List<PipettingInfo> bufferPipettings, string subOutputFolder)
@@ -146,22 +153,15 @@ namespace APDilution
             File.WriteAllLines(bufferFile, bufferStrs);
         }
 
-        private List<PipettingInfo> GenerateFirstColumnWorklist(List<PipettingInfo> samplePipettings, string subOutputFolder)
+        private void GenerateFirstColumnWorklist(List<PipettingInfo> firstColumnPipettings, string subOutputFolder)
         {
             List<string> strs = new List<string>();
             List<string> firstColumnStrs = new List<string>();
-            var firstPlateSamplePipettings = samplePipettings.Where(x => x.dstLabware == firstDilutionPlateName).ToList();
-            //extract first column pipettings
-            var firstColumnPipettings = firstPlateSamplePipettings.Where(x => x.dstWellID <= 8).ToList();
            
-            var secondPlateSamplePipettings = samplePipettings.Where(x => x.dstLabware == secondDilutionPlateName).ToList();
-            //extract first column pipettings
-            firstColumnPipettings.AddRange( secondPlateSamplePipettings.Where(x => x.dstWellID <= 8).ToList());
-            firstColumnStrs.AddRange(GetStringForEachColumn(firstColumnPipettings, Configurations.Instance.SampleLiquidClass));
+            firstColumnStrs.AddRange(GetStringForEachColumn(firstColumnPipettings, Configurations.Instance.SampleLiquidClass,true));
             
             string firstColumnFile = subOutputFolder + "firstColumn.gwl";
             File.WriteAllLines(firstColumnFile, firstColumnStrs);
-            return firstColumnPipettings;
         }
 
         private void Copy2AssayFolder(string tplFile, string subFolder, string reactionBarcode)
@@ -340,7 +340,7 @@ namespace APDilution
                 pipettingInfo.srcWellID, pipettingInfo.vol, pipettingInfo.dstLabware, pipettingInfo.dstWellID);
         }
 
-        private List<string> GetStringForEachColumn(List<PipettingInfo> firstPlateSamplePipettings, string liquidClass)
+        private List<string> GetStringForEachColumn(List<PipettingInfo> firstPlateSamplePipettings, string liquidClass, bool bNeedShake = true)
         {
             List<string> strs = new List<string>();
             for(int col = 0; col< 12; col++)
@@ -351,7 +351,10 @@ namespace APDilution
                 if (thisColumnPipetting.Count == 0)
                     continue;
                 strs.AddRange(Format(thisColumnPipetting, liquidClass));
-                strs.AddRange(GetShakeCommands());
+                if (bNeedShake)
+                    strs.AddRange(GetShakeCommands());
+                else
+                    strs.Add("B;");
             }
             return strs;
         }
@@ -465,7 +468,25 @@ namespace APDilution
         private IEnumerable<string> Format(List<PipettingInfo> pipettingInfos,string liquidClass)
         {
             List<string> commands = new List<string>();
+            List<PipettingInfo> validVolumePipettingInfos = new List<PipettingInfo>();
             foreach (var pipettingInfo in pipettingInfos)
+            {
+                if(pipettingInfo.vol <= 180)
+                {
+                    validVolumePipettingInfos.Add(pipettingInfo);
+                }
+                else
+                {
+                    int times = ((int)pipettingInfo.vol + 180 - 1) / 180;
+                    for(int i = 0; i< times; i++)
+                    {
+                        PipettingInfo clonePipettingInfo = new PipettingInfo(pipettingInfo);
+                        clonePipettingInfo.vol = i == times - 1? pipettingInfo.vol - (times-1) * 180 : 180;
+                        validVolumePipettingInfos.Add(clonePipettingInfo);
+                    }
+                }
+            }
+            foreach (var pipettingInfo in validVolumePipettingInfos)
             {
                 commands.Add(GetAspirate(pipettingInfo.srcLabware, pipettingInfo.srcWellID, pipettingInfo.vol, liquidClass));
                 commands.Add(GetDispense(pipettingInfo.dstLabware, pipettingInfo.dstWellID, pipettingInfo.vol, liquidClass));
@@ -548,20 +569,20 @@ namespace APDilution
         }
 
         #region sample
-        internal List<PipettingInfo> GenerateSamplePipettingInfos(int firstPlateCnt)
+        internal List<PipettingInfo> GenerateSamplePipettingInfos(int firstPlateCnt, ref List<PipettingInfo> firstColumnPipettings)
         {
             var firstPlateSamples = rawDilutionInfos.Take(firstPlateCnt).ToList();
             var secondPlateSamples = rawDilutionInfos.Skip(firstPlateCnt).ToList();
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
-            var firstPlate = GenerateSamplePipettingInfos(firstPlateSamples, firstDilutionPlateName);
-            var secondPlate = GenerateSamplePipettingInfos(secondPlateSamples, secondDilutionPlateName);
+            var firstPlate = GenerateSamplePipettingInfos(firstPlateSamples, firstDilutionPlateName, ref firstColumnPipettings);
+            var secondPlate = GenerateSamplePipettingInfos(secondPlateSamples, secondDilutionPlateName, ref firstColumnPipettings);
             pipettingInfos.AddRange(firstPlate);
             pipettingInfos.AddRange(secondPlate);
             pipettingInfos = SplitByVolume(pipettingInfos);
             return pipettingInfos;
         }
 
-        private List<PipettingInfo> GenerateSamplePipettingInfos(List<DilutionInfo> dilutionInfos, string destPlateLabel)
+        private List<PipettingInfo> GenerateSamplePipettingInfos(List<DilutionInfo> dilutionInfos, string destPlateLabel, ref List<PipettingInfo> firstColumnPipettings)
         {
             int columnIndex = 0;
 
@@ -580,7 +601,7 @@ namespace APDilution
                     var thisColumnPipettingInfos = dilutionInfos.Take(8).ToList();
                     if (dilutionInfos.Exists(x => x.dilutionTimes != 0))
                     {
-                        var thisColumnSampleInfos = GenerateSamplePipettingInfos(thisColumnPipettingInfos, destPlateLabel, columnIndex);
+                        var thisColumnSampleInfos = GenerateSamplePipettingInfos(thisColumnPipettingInfos, destPlateLabel, columnIndex, ref firstColumnPipettings);
                         samplePipettingInfos.AddRange(thisColumnSampleInfos);
                     }
                     dilutionInfos = dilutionInfos.Skip(thisColumnPipettingInfos.Count).ToList();
@@ -593,24 +614,36 @@ namespace APDilution
         private int GetMaxDilutionWellsNeeded(List<DilutionInfo> thisColumnPipettingInfos)
         {
             int maxWellsNeed = 1;
-            for (int i = 0; i < thisColumnPipettingInfos.Count; i++)
+            foreach(var pipettingInfo in thisColumnPipettingInfos)
             {
-                int times = thisColumnPipettingInfos[i].dilutionTimes;
-                int mrdTimes = ExcelReader.MRDTimes;
-                int remainTimes = times / mrdTimes;
-                FactorFinder factorFinder = new FactorFinder();
-                int mrdWellsNeed = factorFinder.GetBestFactors(mrdTimes,true).Count;
-                int remainWellsNeed = factorFinder.GetBestFactors(remainTimes).Count;
-                int totalWellsNeed = mrdWellsNeed + remainWellsNeed;
-                if (mrdTimes == 1)
-                    totalWellsNeed = remainWellsNeed;
-                if (totalWellsNeed > maxWellsNeed)
-                    maxWellsNeed = totalWellsNeed;
+                List<int> eachStepTimes = new List<int>();
+                int mrdSteps = 0;
+                int times = pipettingInfo.dilutionTimes;
+                List<int> dilutionVolumes = GetEachStepVolume(times, pipettingInfo.orgVolume, true, ref eachStepTimes, ref mrdSteps);
+                maxWellsNeed = Math.Max(maxWellsNeed,dilutionVolumes.Count);
             }
-
-            //if (maxWellsNeed > Configurations.Instance.DilutionWells)
-            //    throw new Exception("稀释孔数量不足以实现稀释！");
             return maxWellsNeed;
+
+
+            //int maxWellsNeed = 1;
+            //for (int i = 0; i < thisColumnPipettingInfos.Count; i++)
+            //{
+            //    int times = thisColumnPipettingInfos[i].dilutionTimes;
+            //    int mrdTimes = ExcelReader.MRDTimes;
+            //    int remainTimes = times / mrdTimes;
+            //    FactorFinder factorFinder = new FactorFinder();
+            //    int mrdWellsNeed = factorFinder.GetBestFactors(mrdTimes,true).Count;
+            //    int remainWellsNeed = factorFinder.GetBestFactors(remainTimes).Count;
+            //    int totalWellsNeed = mrdWellsNeed + remainWellsNeed;
+            //    if (mrdTimes == 1)
+            //        totalWellsNeed = remainWellsNeed;
+            //    if (totalWellsNeed > maxWellsNeed)
+            //        maxWellsNeed = totalWellsNeed;
+            //}
+
+            ////if (maxWellsNeed > Configurations.Instance.DilutionWells)
+            ////    throw new Exception("稀释孔数量不足以实现稀释！");
+            //return maxWellsNeed;
         }
 
 
@@ -729,7 +762,8 @@ namespace APDilution
 
             return rCommand;
         }
-        private List<PipettingInfo> GenerateSamplePipettingInfos(List<DilutionInfo> thisColumnDilutionInfos, string destPlateLabel, int columnIndex)
+        private List<PipettingInfo> GenerateSamplePipettingInfos(List<DilutionInfo> thisColumnDilutionInfos, string destPlateLabel,
+            int columnIndex, ref List<PipettingInfo> firstColumnPipettings)
         {
             List<PipettingInfo> pipettingInfos = new List<PipettingInfo>();
             for (int i = 0; i < thisColumnDilutionInfos.Count; i++)
@@ -737,6 +771,7 @@ namespace APDilution
                 //GenerateBufferPipettingInfos()
                 int indexInColumn = i;
                 List<PipettingInfo> thisSamplePipettingInfos = GenerateSamplePipettingInfos(thisColumnDilutionInfos[i], destPlateLabel, columnIndex, indexInColumn);
+                firstColumnPipettings.Add(thisSamplePipettingInfos.First());
                 pipettingInfos.AddRange(thisSamplePipettingInfos);
             }
             var fromSourceLabwarePipettingInfos = pipettingInfos.Where(x => IsFromSourceLabware(x)).ToList();
@@ -1195,10 +1230,19 @@ namespace APDilution
                 }
             }
             List<int> vols = new List<int>();
+            bool isFirstTime = true;
             foreach (var thisStepTimes in eachStepTimes)
             {
                 int totalVol = (int)sampleVol * thisStepTimes;
                 int bufferVol = 0;
+                if(!isFirstTime)
+                {
+                    sampleVol -= deadVolume;
+                    totalVol = (int)sampleVol * thisStepTimes;
+                }
+
+                isFirstTime = false;
+               
                 
                 if( totalVol > Configurations.Instance.DilutionVolume)
                 {

@@ -8,3 +8,5 @@
 0.16 让用户输入条码
 0.17 fix bug, 当稀释孔为4时，板子孔数不够
 0.18 优化buffer加样
+0.42 dilution => dilution + transfer
+0.43 超过180的dilution 分成n份。

@@ -61,7 +61,7 @@ namespace APDilution.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 0.37.
+        ///   Looks up a localized string similar to 0.43.
         /// </summary>
         internal static string version {
             get {
